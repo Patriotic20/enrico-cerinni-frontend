@@ -39,4 +39,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Start the static file server on the exposed PORT
-CMD serve -s dist -l tcp://0.0.0.0:$PORT
+CMD ["sh", "-c", "serve -s dist -p ${PORT:-3000}"]

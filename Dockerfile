@@ -3,11 +3,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install ALL dependencies (including dev tools like vite)
+# Copy package files and install dependencies
 COPY package.json package-lock.json* ./
+
+# Ensure devDependencies are installed even if the base environment is production
+ENV NODE_ENV=development
 RUN npm ci
 
-# Copy source code and build
+# Copy source code and build the application
 COPY . .
 RUN npm run build
 

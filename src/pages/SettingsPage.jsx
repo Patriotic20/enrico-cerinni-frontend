@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Package, Palette, Ruler, Calendar, Tag, Settings } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import { Card, Button } from '../../components/ui';
-import Table from '../../components/tables/Table';
-import CategoryModal from '../../components/CategoryModal';
-import BrandModal from '../../components/BrandModal';
-import ColorModal from '../../components/ColorModal';
-import SizeModal from '../../components/SizeModal';
-import SeasonModal from '../../components/SeasonModal';
-import Modal from '../../components/modals/Modal';
-import { settingsAPI } from '../../api';
-import { cn } from '../../utils/cn';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import { Card, Button } from '../components/ui';
+import Table from '../components/tables/Table';
+import CategoryModal from '../components/CategoryModal';
+import BrandModal from '../components/BrandModal';
+import ColorModal from '../components/ColorModal';
+import SizeModal from '../components/SizeModal';
+import SeasonModal from '../components/SeasonModal';
+import Modal from '../components/modals/Modal';
+import { settingsAPI } from '../api';
+import { cn } from '../utils/cn';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('categories');

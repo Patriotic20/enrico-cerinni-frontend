@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendingDown, Plus, Search, Filter } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import ExpenseModal from '../../components/modals/ExpenseModal';
-import SupplierModal from '../../components/modals/SupplierModal';
-import EmployeeModal from '../../components/modals/EmployeeModal';
-import { LoadingSpinner, Card } from '../../components/ui';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import ExpenseModal from '../components/modals/ExpenseModal';
+import SupplierModal from '../components/modals/SupplierModal';
+import EmployeeModal from '../components/modals/EmployeeModal';
+import { LoadingSpinner, Card } from '../components/ui';
 import { 
   FinanceStats, 
   FinanceTabs, 
   ExpensesTab, 
   SuppliersTab, 
   SalaryTab 
-} from '../../components/finance';
-import { useFinance } from '../../hooks/useFinance';
-import { formatCurrency, formatDate } from '../../utils/finance';
+} from '../components/finance';
+import { useFinance } from '../hooks/useFinance';
+import { formatCurrency, formatDate } from '../utils/finance';
 
 // Finance header component similar to inventory
 const FinanceHeader = ({ stats, loading, onAddExpense, onAddSupplier, onAddEmployee, activeTab }) => {

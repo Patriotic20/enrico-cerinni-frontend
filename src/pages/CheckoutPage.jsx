@@ -9,11 +9,11 @@
 
 import { useEffect, Suspense } from 'react';
 import { DollarSign } from 'lucide-react';
-import logger from '../../utils/logger';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import ClientModal from '../../components/modals/ClientModal';
-import { LoadingSpinner, Card, Button } from '../../components/ui';
+import logger from '../utils/logger';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import ClientModal from '../components/modals/ClientModal';
+import { LoadingSpinner, Card, Button } from '../components/ui';
 import {
   ProductSearch,
   CartItems,
@@ -22,10 +22,10 @@ import {
   PaymentConfirmationModal,
   DebtWarningModal,
   ReceiptModal
-} from '../../components/checkout';
-import { useCheckout } from '../../hooks/useCheckout';
-import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
+} from '../components/checkout';
+import { useCheckout } from '../hooks/useCheckout';
+import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../utils/cn';
 
 // Checkout header component
 const CheckoutHeader = ({ cart, total, onCheckout, loading }) => (

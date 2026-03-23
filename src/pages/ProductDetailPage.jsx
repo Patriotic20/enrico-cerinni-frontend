@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Package, Tag, Palette, Calendar, DollarSign, Hash, AlertCircle } from 'lucide-react';
-import Layout from '../../../components/layout/Layout';
-import Button from '../../../components/ui/Button';
-import Modal from '../../../components/modals/Modal';
-import ProductForm from '../../../components/forms/ProductForm';
-import ProductVariants from '../../../components/inventory/ProductVariants';
-import VariantCreationModal from '../../../components/modals/VariantCreationModal';
-import { useProductDetail } from '../../../hooks';
+import Layout from '../components/layout/Layout';
+import Button from '../components/ui/Button';
+import Modal from '../components/modals/Modal';
+import ProductForm from '../components/forms/ProductForm';
+import ProductVariants from '../components/inventory/ProductVariants';
+import VariantCreationModal from '../components/modals/VariantCreationModal';
+import { useProductDetail } from '../hooks';
 
 export default function ProductDetailPage() {
   const params = useParams();

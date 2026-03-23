@@ -9,14 +9,14 @@
 
 import { useEffect, Suspense } from 'react';
 import { MessageSquare } from 'lucide-react';
-import logger from '../../utils/logger';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import { LoadingSpinner, Card } from '../../components/ui';
-import MarketingContent from '../../components/marketing/MarketingContent';
-import { useMarketing } from '../../hooks/useMarketing';
-import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
+import logger from '../utils/logger';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import { LoadingSpinner, Card } from '../components/ui';
+import MarketingContent from '../components/marketing/MarketingContent';
+import { useMarketing } from '../hooks/useMarketing';
+import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../utils/cn';
 
 // Marketing header component
 const MarketingHeader = () => (

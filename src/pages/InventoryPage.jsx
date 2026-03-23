@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Edit, Trash2, Eye, Palette, Ruler } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import Table from '../../components/tables/Table';
-import Button from '../../components/ui/Button';
-import { LoadingSpinner, Card } from '../../components/ui';
-import Input from '../../components/forms/Input';
-import Modal from '../../components/modals/Modal';
-import ProductForm from '../../components/forms/ProductForm';
-import ProductVariantForm from '../../components/forms/ProductVariantForm';
-import { productsAPI, brandsAPI, colorsAPI, seasonsAPI, sizesAPI, productVariantsAPI, settingsAPI } from '../../api';
-import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../utils/cn';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import Table from '../components/tables/Table';
+import Button from '../components/ui/Button';
+import { LoadingSpinner, Card } from '../components/ui';
+import Input from '../components/forms/Input';
+import Modal from '../components/modals/Modal';
+import ProductForm from '../components/forms/ProductForm';
+import ProductVariantForm from '../components/forms/ProductVariantForm';
+import { productsAPI, brandsAPI, colorsAPI, seasonsAPI, sizesAPI, productVariantsAPI, settingsAPI } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../utils/cn';
 
 // Simple cache for filter options
 const filterCache = {

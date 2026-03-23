@@ -8,11 +8,11 @@
  */
 
 import { Suspense } from 'react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { DashboardContent } from '../../components/dashboard';
-import { useDashboard } from '../../hooks';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { DashboardContent } from '../components/dashboard';
+import { useDashboard } from '../hooks';
 
 // Loading component for dashboard content
 const DashboardLoading = () => (

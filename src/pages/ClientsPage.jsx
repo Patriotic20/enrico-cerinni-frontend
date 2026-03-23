@@ -8,15 +8,15 @@
  */
 
 import { Search, Plus, Trash2, User, Edit, Eye, MessageSquare, Send, Phone, MapPin, Users, Filter } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import { Button, Card } from '../../components/ui';
-import Input from '../../components/forms/Input';
-import Table from '../../components/tables/Table';
-import ClientManagementModal from '../../components/modals/ClientManagementModal';
-import ClientMessagingModal from '../../components/modals/ClientMessagingModal';
-import { useClientManagement } from '../../hooks/useClientManagement';
-import { cn } from '../../utils/cn';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import { Button, Card } from '../components/ui';
+import Input from '../components/forms/Input';
+import Table from '../components/tables/Table';
+import ClientManagementModal from '../components/modals/ClientManagementModal';
+import ClientMessagingModal from '../components/modals/ClientMessagingModal';
+import { useClientManagement } from '../hooks/useClientManagement';
+import { cn } from '../utils/cn';
 
 // Clients header component
 const ClientsHeader = ({ totalItems, selectedClientsCount, hasSelectedClients, onAddClient, onBulkMessage, onBulkDelete }) => (

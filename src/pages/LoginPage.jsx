@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, HelpCircle, ShoppingBag, User, Lock, Loader2 } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import Input from '../../components/forms/Input';
-import Button from '../../components/ui/Button';
+import { useAuth } from '../contexts/AuthContext';
+import Input from '../components/forms/Input';
+import Button from '../components/ui/Button';
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);

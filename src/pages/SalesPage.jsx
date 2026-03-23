@@ -1,19 +1,19 @@
 import { useEffect } from 'react';
 import { RefreshCw, DollarSign, Filter, Download, TrendingUp } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Button, LoadingSpinner } from '../../components/ui';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Button, LoadingSpinner } from '../components/ui';
 import { 
   SalesFilters, 
   SalesPagination, 
   SaleDetailsModal, 
   SalesTable
-} from '../../components/sales';
-import SaleDebtPaymentModal from '../../components/modals/SaleDebtPaymentModal';
-import { useAuth } from '../../contexts/AuthContext';
-import useSales from '../../hooks/useSales';
-import { cn } from '../../utils/cn';
+} from '../components/sales';
+import SaleDebtPaymentModal from '../components/modals/SaleDebtPaymentModal';
+import { useAuth } from '../contexts/AuthContext';
+import useSales from '../hooks/useSales';
+import { cn } from '../utils/cn';
 
 // Sales header component
 const SalesHeader = ({ stats, showFilters, setShowFilters, onRefresh, onExport, loading, formatCurrency }) => (

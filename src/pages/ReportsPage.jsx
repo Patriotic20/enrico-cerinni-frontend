@@ -20,10 +20,10 @@ import {
   PieChart,
   Activity
 } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import { Card, Button, LoadingSpinner } from '../../components/ui';
-import { cn } from '../../utils/cn';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import { Card, Button, LoadingSpinner } from '../components/ui';
+import { cn } from '../utils/cn';
 import {
   SalesReport,
   FinanceReport,
@@ -31,7 +31,7 @@ import {
   ClientsReport,
   PerformanceReport,
   CustomReport
-} from '../../components/reports';
+} from '../components/reports';
 
 // Report types configuration
 const REPORT_TYPES = [
@@ -219,7 +219,7 @@ const ReportContent = ({ reportType }) => {
       
       try {
         // Use test API for now - you can switch to authenticated API later
-        const { reportsAPI } = await import('../../api');
+        const { reportsAPI } = await import('../api');
         
         const filters = {
           start_date: dateRange.start,

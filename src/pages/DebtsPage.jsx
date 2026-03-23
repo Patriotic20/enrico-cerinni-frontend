@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, DollarSign, AlertCircle, User, Eye, CreditCard, Receipt, Send, Filter } from 'lucide-react';
-import Layout from '../../components/layout/Layout';
-import PageLayout from '../../components/layout/PageLayout';
-import Table from '../../components/tables/Table';
-import DebtPaymentModal from '../../components/modals/DebtPaymentModal';
-import { DebtFilters, DebtTrendChart } from '../../components/debts';
-import { LoadingSpinner, Card, Button } from '../../components/ui';
-import { useAuth } from '../../contexts/AuthContext';
-import { clientsAPI, salesAPI } from '../../api';
+import Layout from '../components/layout/Layout';
+import PageLayout from '../components/layout/PageLayout';
+import Table from '../components/tables/Table';
+import DebtPaymentModal from '../components/modals/DebtPaymentModal';
+import { DebtFilters, DebtTrendChart } from '../components/debts';
+import { LoadingSpinner, Card, Button } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { clientsAPI, salesAPI } from '../api';
 
 export default function DebtsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();

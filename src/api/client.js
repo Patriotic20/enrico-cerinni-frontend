@@ -3,7 +3,7 @@ import { handleApiError } from '../utils/api';
 import logger from '../utils/logger';
 
 const api = axios.create({
-  baseURL: 'https://api.enrico.uz',
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.enrico.uz',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

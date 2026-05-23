@@ -28,7 +28,7 @@ services:
       context: ../enrico-backend
       dockerfile: Dockerfile
     ports:
-      - "${BACKEND_PORT:-8080}:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-enrico_cerrini}
       - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-key-here-change-in-production}
@@ -57,7 +57,7 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${BACKEND_URL:-http://localhost:8080}
+      - NEXT_PUBLIC_API_URL=${BACKEND_URL:-http://localhost:8000}
       - NEXT_PUBLIC_APP_NAME=Enrico Cerrini
     depends_on:
       - backend

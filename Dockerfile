@@ -38,5 +38,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the static file server on the exposed PORT (serves automatically respects the PORT env var)
-CMD ["serve", "-s", "dist"]
+# Start the static file server explicitly on port 3000 to match EXPOSE declaration
+CMD ["serve", "-s", "dist", "-l", "3000"]

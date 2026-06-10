@@ -12,6 +12,8 @@ RUN npm ci
 
 # Copy source code and build the application
 COPY . .
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production image, use a lightweight static server

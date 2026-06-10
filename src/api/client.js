@@ -2,8 +2,17 @@ import axios from 'axios';
 import { handleApiError } from '../utils/api';
 import logger from '../utils/logger';
 
+const getBaseURL = () => {
+  let url = import.meta.env.VITE_API_URL || 'https://api.enrico.uz';
+  // If the URL is absolute but doesn't start with a protocol, prepend https://
+  if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+    url = `https://${url}`;
+  }
+  return url;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.enrico.uz',
+  baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

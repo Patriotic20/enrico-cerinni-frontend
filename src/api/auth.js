@@ -1,4 +1,4 @@
-import api from './client';
+import api, { AUTH_STORAGE_TYPE, getStoredRefreshToken } from './client';
 import { validateApiResponse } from '../utils/api';
 
 export const authAPI = {
@@ -36,10 +36,14 @@ export const authAPI = {
     }
   },
 
-  // Refresh access token (cookies are automatically sent)
+  // Refresh access token
   refreshToken: async () => {
     try {
-      const response = await api.post('/auth/refresh');
+      const body = {};
+      if (AUTH_STORAGE_TYPE !== 'cookie') {
+        body.refresh_token = getStoredRefreshToken();
+      }
+      const response = await api.post('/auth/refresh', body);
       return validateApiResponse(response.data);
     } catch (error) {
       console.error('Token refresh API error:', error);

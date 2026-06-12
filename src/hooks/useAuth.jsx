@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth';
+import { AUTH_STORAGE_TYPE, setStoredTokens, clearStoredTokens, getStoredAccessToken } from '../api/client';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -16,6 +17,13 @@ export const useAuth = () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Optimisation: skip validation if we are in storage mode and don't have an access token
+      if (AUTH_STORAGE_TYPE !== 'cookie' && !getStoredAccessToken()) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       
       const response = await authAPI.validateToken();
       
@@ -47,6 +55,12 @@ export const useAuth = () => {
       const response = await authAPI.login(email, password);
       
       if (response && response.success) {
+        // Save tokens if we are using storage mode
+        if (AUTH_STORAGE_TYPE !== 'cookie' && response.data) {
+          const { access_token, refresh_token } = response.data;
+          setStoredTokens(access_token, refresh_token);
+        }
+
         // After successful login, validate the token to get user data
         const validateResponse = await authAPI.validateToken();
         
@@ -87,6 +101,10 @@ export const useAuth = () => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear tokens from storage if using storage mode
+      if (AUTH_STORAGE_TYPE !== 'cookie') {
+        clearStoredTokens();
+      }
       setUser(null);
       setError(null);
       setLoading(false);

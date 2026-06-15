@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
@@ -6,19 +6,21 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import Notification from './components/ui/Notification';
 import { Toaster } from 'react-hot-toast';
 
-// Import Pages
+// Login stays eager (first paint, public route)
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import CheckoutPage from './pages/CheckoutPage';
-import SalesPage from './pages/SalesPage';
-import InventoryPage from './pages/InventoryPage';
-import ProductDetailPage from './pages/ProductDetailPage';
-import ClientsPage from './pages/ClientsPage';
-import FinancePage from './pages/FinancePage';
-import DebtsPage from './pages/DebtsPage';
-import MarketingPage from './pages/MarketingPage';
-import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
+
+// Lazy-load protected pages — each becomes its own chunk, loaded on demand
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const SalesPage = lazy(() => import('./pages/SalesPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const FinancePage = lazy(() => import('./pages/FinancePage'));
+const DebtsPage = lazy(() => import('./pages/DebtsPage'));
+const MarketingPage = lazy(() => import('./pages/MarketingPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -45,12 +47,26 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const PageFallback = () => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    fontSize: '1.125rem',
+    color: '#6b7280'
+  }}>
+    Yuklanmoqda...
+  </div>
+);
+
 const App = () => {
   return (
     <BrowserRouter>
       <ErrorBoundary>
         <AppProvider>
           <AuthProvider>
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Public Route */}
               <Route path="/login" element={<LoginPage />} />
@@ -69,6 +85,7 @@ const App = () => {
               <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
               <Route path="/settings/*" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             </Routes>
+            </Suspense>
             <Notification />
             <Toaster position="top-right" />
           </AuthProvider>

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
@@ -15,6 +16,14 @@ export default function SalesPerformanceChart({ data = [], selectedPeriod = '1mo
   ];
 
   const chartData = data.length > 0 ? data : defaultData;
+
+  const { totalSales, totalOrders, avgOrder } = useMemo(() => ({
+    totalSales: chartData.reduce((acc, item) => acc + (item.sales || 0), 0),
+    totalOrders: chartData.reduce((acc, item) => acc + (item.orders || 0), 0),
+    avgOrder: chartData.length > 0
+      ? chartData.reduce((acc, item) => acc + (item.avgOrder || 0), 0) / chartData.length
+      : 0,
+  }), [chartData]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -137,19 +146,19 @@ export default function SalesPerformanceChart({ data = [], selectedPeriod = '1mo
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(chartData.reduce((acc, item) => acc + (item.sales || 0), 0))}
+              {formatCurrency(totalSales)}
             </p>
             <p className="text-sm text-gray-600">Jami sotuvlar</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-green-600">
-              {chartData.reduce((acc, item) => acc + (item.orders || 0), 0)}
+              {totalOrders}
             </p>
             <p className="text-sm text-gray-600">Jami buyurtmalar</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-600">
-              {formatCurrency(chartData.length > 0 ? chartData.reduce((acc, item) => acc + (item.avgOrder || 0), 0) / chartData.length : 0)}
+              {formatCurrency(avgOrder)}
             </p>
             <p className="text-sm text-gray-600">O'rtacha buyurtma</p>
           </div>

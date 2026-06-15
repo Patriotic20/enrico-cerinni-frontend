@@ -111,8 +111,9 @@ api.interceptors.response.use(
       method: error.config?.method,
       status: error.response?.status,
       statusText: error.response?.statusText,
-      data: error.response?.data,
       message: error.message,
+      // Full response body only in dev — avoid leaking payloads to prod console
+      ...(import.meta.env.MODE !== 'production' && { data: error.response?.data }),
     });
 
     if (error.response?.status === 401 && !originalRequest._retry) {

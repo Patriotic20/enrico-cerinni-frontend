@@ -7,6 +7,7 @@ import DebtPaymentModal from '../components/modals/DebtPaymentModal';
 import { DebtFilters, DebtTrendChart } from '../components/debts';
 import { LoadingSpinner, Card, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { useDebounce } from '../hooks/useDebounce';
 import { clientsAPI, salesAPI } from '../api';
 
 export default function DebtsPage() {
@@ -55,15 +56,15 @@ export default function DebtsPage() {
     }
   }, [authLoading]);
 
+  // Debounce filters so typing fires one request after the user stops.
+  const debouncedFilters = useDebounce(filters, 400);
+
   // Effect for filtering
   useEffect(() => {
     if (!authLoading && isAuthenticated()) {
-      const delayedSearch = setTimeout(() => {
-        loadClientsWithDebts();
-      }, 300);
-      return () => clearTimeout(delayedSearch);
+      loadClientsWithDebts();
     }
-  }, [filters]);
+  }, [debouncedFilters]);
 
   const loadClientsWithDebts = async (filterParams = {}) => {
     setLoading(true);

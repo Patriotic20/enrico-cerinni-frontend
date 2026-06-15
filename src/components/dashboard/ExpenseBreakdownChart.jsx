@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
@@ -15,7 +16,15 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
   ];
 
   const chartData = data.length > 0 ? data : defaultData;
-  const totalExpenses = chartData.reduce((acc, item) => acc + item.value, 0);
+  const totalExpenses = useMemo(
+    () => chartData.reduce((acc, item) => acc + item.value, 0),
+    [chartData]
+  );
+  // Copy before sort — Array.sort mutates, and chartData may be the live data prop
+  const topExpenses = useMemo(
+    () => [...chartData].sort((a, b) => b.value - a.value).slice(0, 3),
+    [chartData]
+  );
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -142,9 +151,7 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
       <div className="mt-6 pt-4 border-t border-gray-200">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Eng katta xarajatlar</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {chartData
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 3)
+          {topExpenses
             .map((item, index) => (
               <div key={index} className="text-center p-3 rounded-lg bg-gray-50">
                 <div 

@@ -7,6 +7,7 @@
  * @page
  */
 
+import { useMemo } from 'react';
 import { Search, Plus, Trash2, User, Edit, Eye, MessageSquare, Send, Phone, MapPin, Users, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
@@ -86,13 +87,18 @@ const ClientsHeader = ({ totalItems, selectedClientsCount, hasSelectedClients, o
 
 // Stats cards component
 const ClientsStats = ({ clients, totalItems }) => {
-  const totalDebt = clients.reduce((sum, client) => sum + (Number(client.debt_amount) || 0), 0);
-  const clientsWithDebt = clients.filter(client => (Number(client.debt_amount) || 0) > 0).length;
-  const recentClients = clients.filter(client => {
-    if (!client.last_purchase_date) return false;
-    const daysSince = Math.floor((new Date() - new Date(client.last_purchase_date)) / (1000 * 60 * 60 * 24));
-    return daysSince <= 30;
-  }).length;
+  const { totalDebt, clientsWithDebt, recentClients } = useMemo(() => {
+    const now = Date.now();
+    return {
+      totalDebt: clients.reduce((sum, client) => sum + (Number(client.debt_amount) || 0), 0),
+      clientsWithDebt: clients.filter(client => (Number(client.debt_amount) || 0) > 0).length,
+      recentClients: clients.filter(client => {
+        if (!client.last_purchase_date) return false;
+        const daysSince = Math.floor((now - new Date(client.last_purchase_date)) / (1000 * 60 * 60 * 24));
+        return daysSince <= 30;
+      }).length,
+    };
+  }, [clients]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">

@@ -48,7 +48,6 @@ export function useDashboard() {
           ? expenseResponse.value.data : [],
       };
       
-      console.log('Dashboard chart data loaded:', newChartData);
       setChartData(newChartData);
     } catch (error) {
       console.error('Error loading chart data:', error);
@@ -59,33 +58,36 @@ export function useDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Load dashboard statistics
-      const statsResponse = await callApi(dashboardAPI.getStats);
-      console.log('Dashboard stats response:', statsResponse);
-      if (statsResponse.success && statsResponse.data) {
-        const apiData = statsResponse.data;
-        const newStats = {
-          totalSales: apiData.total_sales || 0,
-          totalProducts: apiData.total_products || 0,
-          totalClients: apiData.total_clients || 0,
-          clientsWithDebts: apiData.clients_with_debts || 0,
-          monthlyRevenue: apiData.total_revenue || 0,
-          monthlyExpenses: apiData.monthly_expenses || 0,
-          totalOrders: apiData.total_orders || 0,
-        };
-        console.log('Dashboard stats mapped:', newStats);
-        setStats(newStats);
+      // Fire stats, transactions and charts together instead of serially —
+      // they are independent, so a waterfall just adds round-trips.
+      const [statsResult, transactionsResult] = await Promise.allSettled([
+        callApi(dashboardAPI.getStats),
+        callApi(() => dashboardAPI.getRecentTransactions(10)),
+        loadChartData(),
+      ]);
+
+      if (statsResult.status === 'fulfilled') {
+        const statsResponse = statsResult.value;
+        if (statsResponse.success && statsResponse.data) {
+          const apiData = statsResponse.data;
+          setStats({
+            totalSales: apiData.total_sales || 0,
+            totalProducts: apiData.total_products || 0,
+            totalClients: apiData.total_clients || 0,
+            clientsWithDebts: apiData.clients_with_debts || 0,
+            monthlyRevenue: apiData.total_revenue || 0,
+            monthlyExpenses: apiData.monthly_expenses || 0,
+            totalOrders: apiData.total_orders || 0,
+          });
+        }
       }
 
-      // Load recent transactions
-      const transactionsResponse = await callApi(() => dashboardAPI.getRecentTransactions(10));
-      if (transactionsResponse.success && transactionsResponse.data) {
-        setRecentTransactions(transactionsResponse.data || []);
+      if (transactionsResult.status === 'fulfilled') {
+        const transactionsResponse = transactionsResult.value;
+        if (transactionsResponse.success && transactionsResponse.data) {
+          setRecentTransactions(transactionsResponse.data || []);
+        }
       }
-
-      // Load initial chart data
-      await loadChartData();
-
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }

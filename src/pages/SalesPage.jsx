@@ -13,6 +13,7 @@ import {
 import SaleDebtPaymentModal from '../components/modals/SaleDebtPaymentModal';
 import { useAuth } from '../contexts/AuthContext';
 import useSales from '../hooks/useSales';
+import { useDebounce } from '../hooks/useDebounce';
 import { cn } from '../utils/cn';
 
 // Sales header component
@@ -144,12 +145,16 @@ export default function SalesPage() {
     }
   }, [authLoading, user]);
 
+  // Debounce filters so typing in search fires one request after the user
+  // stops, not two API calls per keystroke. Page changes stay instant.
+  const debouncedFilters = useDebounce(filters, 400);
+
   useEffect(() => {
     if (!authLoading && isAuthenticated()) {
       loadSales();
       loadStats();
     }
-  }, [filters, pagination.page, authLoading]);
+  }, [debouncedFilters, pagination.page, authLoading]);
 
   const handlePayDebtClick = (sale) => {
     setSelectedDebtSale(sale);

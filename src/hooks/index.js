@@ -2,6 +2,7 @@
 export { useAuth } from './useAuth';
 export { useApi } from './useApi';
 export { useLocalStorage } from './useLocalStorage';
+export { useDebounce } from './useDebounce';
 
 // Feature-specific hooks
 export { useDashboard } from './useDashboard';

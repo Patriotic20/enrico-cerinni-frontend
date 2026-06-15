@@ -19,6 +19,7 @@ export default function ProductSearch({
   const [scannedVariantSku, setScannedVariantSku] = useState(null);
   const [isProcessingBarcode, setIsProcessingBarcode] = useState(false);
   const inputRef = useRef(null);
+  const scanTimeoutRef = useRef(null);
   // Auto-focus management for cashier convenience
   useEffect(() => {
     const focusInput = () => {
@@ -100,6 +101,9 @@ export default function ProductSearch({
     return () => {
       document.removeEventListener('click', handleGlobalClick);
       document.removeEventListener('keydown', handleGlobalKeyDown);
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
     };
   }, [showVariantModal]);
 
@@ -138,76 +142,77 @@ export default function ProductSearch({
     }, 100);
   };
 
-  // Handle barcode scanning directly in the search input
-  const handleInputChange = async (e) => {
+  // Run a barcode scan for the given code. Shared by the debounced input
+  // handler and the Enter key handler so a code is only scanned once it's
+  // fully entered (hardware scanners burst characters, then send Enter).
+  const runBarcodeScan = async (code) => {
+    if (!code || isProcessingBarcode) {
+      return;
+    }
+
+    setIsProcessingBarcode(true);
+    try {
+      const scannedProduct = await onBarcodeScan(code);
+      if (scannedProduct) {
+        // Pass the scanned SKU so modal can pre-select the correct variant
+        handleAddToCart(scannedProduct, code);
+      } else {
+        console.log('Barcode scan returned null/undefined for:', code);
+        setSearchTerm('');
+      }
+    } catch (error) {
+      console.error('Barcode scan error:', error);
+      // Clear everything on barcode scan failure
+      setSearchTerm('');
+      setSelectedProduct(null);
+      setScannedVariantSku(null);
+      setShowVariantModal(false);
+    } finally {
+      setIsProcessingBarcode(false);
+      // Ensure input stays focused for the next scan
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+    }
+  };
+
+  // Handle barcode scanning directly in the search input.
+  // Debounce the scan so it fires once the full code is entered, not on every
+  // keystroke — otherwise a code longer than 8 chars scans a truncated prefix.
+  const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
 
-    // Check if input looks like a barcode (typically longer than 8 chars and alphanumeric)
-    const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(value.trim());
-    
-    if (isBarcodePattern && value.length >= 8) {
-      setIsProcessingBarcode(true);
-      try {
-        const scannedProduct = await onBarcodeScan(value.trim());
-        if (scannedProduct) {
-          // Pass the scanned SKU so modal can pre-select the correct variant
-          handleAddToCart(scannedProduct, value.trim());
-        } else {
-          // If onBarcodeScan returns null/undefined, treat as not found
-          console.log('Barcode scan returned null/undefined for:', value.trim());
-          setSearchTerm('');
-        }
-      } catch (error) {
-        console.error('Barcode scan error:', error);
-        // Clear the input on barcode scan failure
-        setSearchTerm('');
-        // Make sure no modal is shown for failed scans
-        setSelectedProduct(null);
-        setScannedVariantSku(null);
-        setShowVariantModal(false);
-        // Show error message to user (you can customize this)
-        console.log('Barcode not found:', value.trim());
-      } finally {
-        setIsProcessingBarcode(false);
-        // Ensure input stays focused
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-          }
-        }, 100);
-      }
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    const trimmed = value.trim();
+    const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(trimmed);
+
+    if (isBarcodePattern) {
+      scanTimeoutRef.current = setTimeout(() => {
+        runBarcodeScan(trimmed);
+      }, 120);
     }
   };
 
   const handleKeyPress = async (e) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       e.preventDefault();
-      
-      // Try barcode scan first if it looks like a barcode
-      const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(searchTerm.trim());
-      
+
+      // Enter ends a scan early — cancel the pending debounced scan
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+
+      const trimmed = searchTerm.trim();
+      const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(trimmed);
+
       if (isBarcodePattern) {
-        setIsProcessingBarcode(true);
-        try {
-          const scannedProduct = await onBarcodeScan(searchTerm.trim());
-          if (scannedProduct) {
-            handleAddToCart(scannedProduct, searchTerm.trim());
-          } else {
-            // If onBarcodeScan returns null/undefined, treat as not found
-            console.log('Barcode scan returned null/undefined for:', searchTerm.trim());
-          }
-          setSearchTerm('');
-        } catch (error) {
-          console.error('Barcode scan error:', error);
-          // Clear everything on barcode scan failure
-          setSearchTerm('');
-          setSelectedProduct(null);
-          setScannedVariantSku(null);
-          setShowVariantModal(false);
-        } finally {
-          setIsProcessingBarcode(false);
-        }
+        await runBarcodeScan(trimmed);
       } else if (searchResults.length > 0) {
         // If not a barcode but we have search results, add first result
         handleAddToCart(searchResults[0]);
@@ -253,7 +258,6 @@ export default function ProductSearch({
           onFocus={() => setIsSearchFocused(true)}
           onBlur={() => setIsSearchFocused(false)}
           className="pl-8 pr-12 py-2 text-sm bg-white/70 border-gray-200 focus:border-blue-400 focus:bg-white transition-all duration-200"
-          disabled={isProcessingBarcode}
         />
         {isProcessingBarcode && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">

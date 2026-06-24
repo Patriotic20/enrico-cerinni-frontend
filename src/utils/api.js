@@ -28,7 +28,8 @@ const BACKEND_MESSAGE_UZ = {
 };
 
 export const getApiErrorMessage = (error, fallback = 'Xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.') => {
-  const raw = error?.response?.data?.message || error?.response?.data?.detail;
+  // Interceptor rejects with wrapped { message }, raw axios errors carry response.data.message
+  const raw = error?.message || error?.response?.data?.message || error?.response?.data?.detail;
   return (raw && BACKEND_MESSAGE_UZ[raw]) || fallback;
 };
 

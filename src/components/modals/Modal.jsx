@@ -66,36 +66,31 @@ const Modal = ({
     }
   }, [closeOnOverlayClick, onClose]);
 
-  // Focus management
+  // Focus + body-scroll: run once per open. Must NOT depend on handleKeyDown,
+  // else re-running steals focus from inputs on every parent re-render.
   useEffect(() => {
-    if (isOpen) {
-      // Store current focus
-      previousFocusRef.current = document.activeElement;
-      
-      // Prevent body scroll
-      document.body.style.overflow = 'hidden';
-      
-      // Add event listeners
-      document.addEventListener('keydown', handleKeyDown);
-      
-      // Focus modal
-      if (modalRef.current) {
-        modalRef.current.focus();
-      }
-      
-      return () => {
-        // Cleanup
-        document.removeEventListener('keydown', handleKeyDown);
-        document.body.style.overflow = 'unset';
-        
-        // Restore focus
-        if (previousFocusRef.current) {
-          previousFocusRef.current.focus();
-        }
-      };
-    } else {
+    if (!isOpen) {
       document.body.style.overflow = 'unset';
+      return;
     }
+    previousFocusRef.current = document.activeElement;
+    document.body.style.overflow = 'hidden';
+    if (modalRef.current) {
+      modalRef.current.focus();
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [isOpen]);
+
+  // Keydown listener tracks latest handleKeyDown without touching focus.
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleKeyDown]);
 
   // Don't render if not open

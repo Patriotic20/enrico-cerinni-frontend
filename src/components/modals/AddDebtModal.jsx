@@ -132,11 +132,10 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
 
             <Input
               label="Qarz summasi (UZS)"
-              type="number"
-              min="0"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
               placeholder="0"
               icon={DollarSign}
             />

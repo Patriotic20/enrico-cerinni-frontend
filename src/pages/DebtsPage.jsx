@@ -78,7 +78,9 @@ export default function DebtsPage() {
       };
       const response = await clientsAPI.getClients(params);
       if (response.success && response.data) {
-        setClients(response.data.items || []);
+        // ponytail: server has_debt filter unreliable; filter client-side too
+        const items = (response.data.items || []).filter(c => (c.debt_amount || 0) > 0);
+        setClients(items);
       }
     } catch (error) {
       console.error('Error loading clients with debts:', error);
@@ -91,7 +93,12 @@ export default function DebtsPage() {
     try {
       const response = await salesAPI.getDebtStats();
       if (response?.success && response?.data) {
-        setStats(response.data);
+        const d = response.data;
+        setStats({
+          totalDebt: d.total_debt ?? 0,
+          totalClients: d.clients_with_debt ?? 0,
+          averageDebt: d.avg_debt ?? 0
+        });
       } else {
         console.warn('Debt stats API returned unsuccessful response');
       }

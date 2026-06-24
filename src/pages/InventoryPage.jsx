@@ -13,6 +13,7 @@ import ProductVariantForm from '../components/forms/ProductVariantForm';
 import { productsAPI, brandsAPI, colorsAPI, seasonsAPI, sizesAPI, productVariantsAPI, settingsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../utils/cn';
+import { getApiErrorMessage } from '../utils/api';
 
 // Simple cache for filter options
 const filterCache = {
@@ -579,7 +580,7 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Mahsulotni o\'chirishda xatolik yuz berdi');
+      alert(getApiErrorMessage(error, 'Mahsulotni o\'chirishda xatolik yuz berdi'));
     }
   }, [setProducts]);
 

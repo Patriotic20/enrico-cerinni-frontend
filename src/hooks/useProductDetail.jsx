@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { productsAPI, brandsAPI, seasonsAPI, productVariantsAPI, settingsAPI } from '../api';
 import logger from '../utils/logger';
+import { getApiErrorMessage } from '../utils/api';
 
 export default function useProductDetail(productId) {
   const [product, setProduct] = useState(null);
@@ -110,7 +111,7 @@ export default function useProductDetail(productId) {
       return { success: response.success };
     } catch (error) {
       logger.error('Error deleting product:', error);
-      return { success: false, error: 'Mahsulot o\'chirilmadi' };
+      return { success: false, error: getApiErrorMessage(error, 'Mahsulot o\'chirilmadi') };
     }
   };
 

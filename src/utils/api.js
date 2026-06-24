@@ -21,6 +21,17 @@ export const handleApiError = (error) => {
   return createApiResponse(false, null, error.message || 'Noma\'lum xatolik', error);
 };
 
+// Map known backend error messages to Uzbek. Falls back to a generic message.
+const BACKEND_MESSAGE_UZ = {
+  'Cannot delete product with existing sales':
+    'Bu mahsulotni o\'chirib bo\'lmaydi: u sotuvlarda ishlatilgan. Sotuv tarixini saqlash uchun o\'chirish bloklangan.',
+};
+
+export const getApiErrorMessage = (error, fallback = 'Xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.') => {
+  const raw = error?.response?.data?.message || error?.response?.data?.detail;
+  return (raw && BACKEND_MESSAGE_UZ[raw]) || fallback;
+};
+
 export const validateApiResponse = (response) => {
   if (!response) {
     return createApiResponse(false, null, 'Javob mavjud emas');

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productsAPI, settingsAPI } from '../api';
+import { getApiErrorMessage } from '../utils/api';
 
 export const useProductManagement = (itemsPerPage = 10) => {
   const [products, setProducts] = useState([]);
@@ -183,7 +184,7 @@ export const useProductManagement = (itemsPerPage = 10) => {
       loadProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Mahsulotni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
+      alert(getApiErrorMessage(error, 'Mahsulotni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.'));
     } finally {
       setModalState(prev => ({ ...prev, deleting: false }));
     }

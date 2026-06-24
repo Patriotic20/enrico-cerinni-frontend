@@ -4,6 +4,7 @@ import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import Table from '../components/tables/Table';
 import DebtPaymentModal from '../components/modals/DebtPaymentModal';
+import AddDebtModal from '../components/modals/AddDebtModal';
 import { DebtFilters, DebtTrendChart } from '../components/debts';
 import { LoadingSpinner, Card, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +20,7 @@ export default function DebtsPage() {
   const [clientTransactions, setClientTransactions] = useState([]);
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAddDebtModal, setShowAddDebtModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [activeTab, setActiveTab] = useState('sales'); // 'sales' or 'transactions'
   const [stats, setStats] = useState({
@@ -433,6 +435,13 @@ export default function DebtsPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowAddDebtModal(true)}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+              >
+                <DollarSign size={16} />
+                <span>Qarz qo'shish</span>
+              </button>
+              <button
                 onClick={toggleFilters}
                 className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded"
               >
@@ -643,6 +652,16 @@ export default function DebtsPage() {
             </div>
           </div>
         )}
+
+        {/* Add Debt Modal */}
+        <AddDebtModal
+          isOpen={showAddDebtModal}
+          onClose={() => setShowAddDebtModal(false)}
+          onAdded={() => {
+            loadClientsWithDebts();
+            loadDebtStats();
+          }}
+        />
 
         {/* Debt Payment Modal */}
         <DebtPaymentModal

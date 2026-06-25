@@ -33,6 +33,10 @@ RUN adduser --system --uid 1001 reactjs
 # Copy the built application from the builder stage
 COPY --from=builder --chown=reactjs:nodejs /app/dist ./dist
 
+# Copy the runtime entrypoint script and make it executable
+COPY --chown=reactjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
+
 USER reactjs
 
 EXPOSE 3000
@@ -40,5 +44,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the static file server explicitly on port 3000 to match EXPOSE declaration
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# The entrypoint writes public/config.js from API_URL at startup, then starts serve.
+# Set API_URL in your Railway service's environment variables to point at the
+# backend's public domain (e.g. https://enrico-cerinni-backend.up.railway.app).
+ENTRYPOINT ["./docker-entrypoint.sh"]

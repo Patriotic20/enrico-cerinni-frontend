@@ -3,8 +3,17 @@ import { handleApiError } from '../utils/api';
 import logger from '../utils/logger';
 
 const getBaseURL = () => {
-  let url = import.meta.env.VITE_API_URL || 'https://api.enrico.uz';
-  // If the URL is absolute but doesn't start with a protocol, prepend https://
+  // Priority order:
+  //   1. window.__APP_CONFIG__.apiUrl  — injected at container startup via docker-entrypoint.sh
+  //      (runtime, no rebuild required — the correct approach for Railway deployments)
+  //   2. import.meta.env.VITE_API_URL  — baked in at build time (local dev / CI overrides)
+  //   3. Hard-coded public backend domain as a last-resort fallback
+  let url =
+    (typeof window !== 'undefined' && window.__APP_CONFIG__?.apiUrl) ||
+    import.meta.env.VITE_API_URL ||
+    'https://api.enrico.uz';
+
+  // Normalise bare hostnames that are missing a protocol
   if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
     url = `https://${url}`;
   }

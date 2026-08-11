@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
@@ -7,8 +7,10 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import Notification from './components/ui/Notification';
 import { Toaster } from 'react-hot-toast';
 
-// Pages are code-split so the initial bundle only carries the current route.
-const LoginPage = lazy(() => import('./pages/LoginPage'));
+// Login stays eager (first paint, public route)
+import LoginPage from './pages/LoginPage';
+
+// Lazy-load protected pages — each becomes its own chunk, loaded on demand
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const SalesPage = lazy(() => import('./pages/SalesPage'));
@@ -49,6 +51,19 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const PageFallback = () => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    fontSize: '1.125rem',
+    color: '#6b7280'
+  }}>
+    Yuklanmoqda...
+  </div>
+);
+
 const App = () => {
   return (
     <BrowserRouter>
@@ -56,7 +71,7 @@ const App = () => {
         <AppProvider>
           <AuthProvider>
             <ConfirmProvider>
-              <Suspense fallback={<FullScreenLoader />}>
+              <Suspense fallback={<PageFallback />}>
                 <Routes>
                   {/* Public Route */}
                   <Route path="/login" element={<LoginPage />} />

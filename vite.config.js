@@ -23,5 +23,11 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      sourcemap: false,
+      // No manualChunks here: Vite 8 builds on rolldown, which rejects the
+      // object form ("manualChunks is not a function") and already splits
+      // vendor code — recharts, router and icons each land in their own chunk.
+    },
   };
 });

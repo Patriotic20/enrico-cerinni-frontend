@@ -4,9 +4,11 @@ import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import Table from '../components/tables/Table';
 import DebtPaymentModal from '../components/modals/DebtPaymentModal';
+import AddDebtModal from '../components/modals/AddDebtModal';
 import { DebtFilters, DebtTrendChart } from '../components/debts';
 import { LoadingSpinner, Card, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
+import { useDebounce } from '../hooks/useDebounce';
 import { clientsAPI, salesAPI } from '../api';
 import toast from 'react-hot-toast';
 
@@ -19,6 +21,7 @@ export default function DebtsPage() {
   const [clientTransactions, setClientTransactions] = useState([]);
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAddDebtModal, setShowAddDebtModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [activeTab, setActiveTab] = useState('sales'); // 'sales' or 'transactions'
   const [stats, setStats] = useState({
@@ -56,15 +59,15 @@ export default function DebtsPage() {
     }
   }, [authLoading]);
 
+  // Debounce filters so typing fires one request after the user stops.
+  const debouncedFilters = useDebounce(filters, 400);
+
   // Effect for filtering
   useEffect(() => {
     if (!authLoading && isAuthenticated()) {
-      const delayedSearch = setTimeout(() => {
-        loadClientsWithDebts();
-      }, 300);
-      return () => clearTimeout(delayedSearch);
+      loadClientsWithDebts();
     }
-  }, [filters]);
+  }, [debouncedFilters]);
 
   const loadClientsWithDebts = async (filterParams = {}) => {
     setLoading(true);
@@ -81,7 +84,9 @@ export default function DebtsPage() {
       };
       const response = await clientsAPI.getClients(params);
       if (response.success && response.data) {
-        setClients(response.data.items || []);
+        // ponytail: server has_debt filter unreliable; filter client-side too
+        const items = (response.data.items || []).filter(c => (c.debt_amount || 0) > 0);
+        setClients(items);
       }
     } catch (error) {
       console.error('Error loading clients with debts:', error);
@@ -94,7 +99,12 @@ export default function DebtsPage() {
     try {
       const response = await salesAPI.getDebtStats();
       if (response?.success && response?.data) {
-        setStats(response.data);
+        const d = response.data;
+        setStats({
+          totalDebt: d.total_debt ?? 0,
+          totalClients: d.clients_with_debt ?? 0,
+          averageDebt: d.avg_debt ?? 0
+        });
       } else {
         console.warn('Debt stats API returned unsuccessful response');
       }
@@ -393,6 +403,13 @@ export default function DebtsPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowAddDebtModal(true)}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+              >
+                <DollarSign size={16} />
+                <span>Qarz qo'shish</span>
+              </button>
+              <button
                 onClick={toggleFilters}
                 className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded"
               >
@@ -603,6 +620,16 @@ export default function DebtsPage() {
             </div>
           </div>
         )}
+
+        {/* Add Debt Modal */}
+        <AddDebtModal
+          isOpen={showAddDebtModal}
+          onClose={() => setShowAddDebtModal(false)}
+          onAdded={() => {
+            loadClientsWithDebts();
+            loadDebtStats();
+          }}
+        />
 
         {/* Debt Payment Modal */}
         <DebtPaymentModal

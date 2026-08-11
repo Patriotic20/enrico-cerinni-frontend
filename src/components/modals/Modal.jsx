@@ -66,50 +66,32 @@ const Modal = ({
     }
   }, [closeOnOverlayClick, onClose]);
 
-  // The keydown handler changes identity whenever the parent re-renders with a
-  // fresh onClose callback. Reading it through a ref keeps the focus effect
-  // below tied to `isOpen` alone.
-  const handleKeyDownRef = useRef(handleKeyDown);
-  useEffect(() => {
-    handleKeyDownRef.current = handleKeyDown;
-  }, [handleKeyDown]);
-
-  // Focus management.
-  //
-  // This effect must depend on `isOpen` only. If it also depended on the
-  // handler, every keystroke inside the modal would re-run it: the cleanup
-  // restores focus to the element that opened the modal, which yanks the caret
-  // out of whatever input is being typed into after a single character.
+  // Focus + body-scroll: run once per open. Must NOT depend on handleKeyDown,
+  // else re-running steals focus from inputs on every parent re-render.
   useEffect(() => {
     if (!isOpen) {
       document.body.style.overflow = 'unset';
-      return undefined;
+      return;
     }
-
-    // Store current focus
     previousFocusRef.current = document.activeElement;
-
-    // Prevent body scroll
     document.body.style.overflow = 'hidden';
-
-    const onKeyDown = (event) => handleKeyDownRef.current(event);
-    document.addEventListener('keydown', onKeyDown);
-
-    // Focus modal
     if (modalRef.current) {
       modalRef.current.focus();
     }
-
     return () => {
-      document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = 'unset';
-
-      // Restore focus to whatever opened the modal
       if (previousFocusRef.current) {
         previousFocusRef.current.focus();
       }
     };
   }, [isOpen]);
+
+  // Keydown listener tracks latest handleKeyDown without touching focus.
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleKeyDown]);
 
   // Don't render if not open
   if (!isOpen) return null;

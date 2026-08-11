@@ -1,12 +1,18 @@
+import { useMemo } from 'react';
 import { DollarSign, Package, Users, ShoppingCart, TrendingUp, CreditCard, AlertTriangle, Target } from 'lucide-react';
 import StatCard from '../pages/StatCard';
 
 export default function DashboardStats({ stats }) {
-  // Calculate additional metrics
-  const netProfit = (stats.monthlyRevenue || 0) - (stats.monthlyExpenses || 0);
-  const profitMargin = stats.monthlyRevenue > 0 ? ((netProfit / stats.monthlyRevenue) * 100) : 0;
-  const avgOrderValue = stats.totalOrders > 0 ? (stats.totalSales / stats.totalOrders) : 0;
-  const debtPercentage = stats.totalClients > 0 ? ((stats.clientsWithDebts / stats.totalClients) * 100) : 0;
+  // Calculate additional metrics (recompute only when stats change)
+  const { netProfit, profitMargin, avgOrderValue, debtPercentage } = useMemo(() => {
+    const netProfit = (stats.monthlyRevenue || 0) - (stats.monthlyExpenses || 0);
+    return {
+      netProfit,
+      profitMargin: stats.monthlyRevenue > 0 ? ((netProfit / stats.monthlyRevenue) * 100) : 0,
+      avgOrderValue: stats.totalOrders > 0 ? (stats.totalSales / stats.totalOrders) : 0,
+      debtPercentage: stats.totalClients > 0 ? ((stats.clientsWithDebts / stats.totalClients) * 100) : 0,
+    };
+  }, [stats]);
 
   return (
     <div className="space-y-6 mb-8">

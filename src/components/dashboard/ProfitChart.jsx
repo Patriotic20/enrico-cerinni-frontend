@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
@@ -15,6 +16,13 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
   ];
 
   const chartData = data.length > 0 ? data : defaultData;
+
+  const { avgMargin, totalProfit } = useMemo(() => ({
+    avgMargin: chartData.length > 0
+      ? chartData.reduce((acc, item) => acc + (item.margin || 0), 0) / chartData.length
+      : 0,
+    totalProfit: chartData.reduce((acc, item) => acc + (item.profit || 0), 0),
+  }), [chartData]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -125,13 +133,13 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-green-600">
-              {chartData.length > 0 ? `${(chartData.reduce((acc, item) => acc + (item.margin || 0), 0) / chartData.length).toFixed(1)}%` : '0%'}
+              {chartData.length > 0 ? `${avgMargin.toFixed(1)}%` : '0%'}
             </p>
             <p className="text-sm text-gray-600">O'rtacha margin</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(chartData.reduce((acc, item) => acc + (item.profit || 0), 0))}
+              {formatCurrency(totalProfit)}
             </p>
             <p className="text-sm text-gray-600">Jami foyda</p>
           </div>

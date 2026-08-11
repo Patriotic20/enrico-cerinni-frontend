@@ -17,6 +17,7 @@ import { toArray } from '../utils/api';
 import { SEARCH_CONFIG } from '../utils/constants';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../utils/api';
 
 // Simple cache for filter options
 const filterCache = {
@@ -527,7 +528,7 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error('Mahsulotni o\'chirishda xatolik yuz berdi');
+      toast.error(getApiErrorMessage(error, 'Mahsulotni o\'chirishda xatolik yuz berdi'));
     }
   }, [refreshProducts, confirm]);
 

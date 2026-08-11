@@ -152,6 +152,15 @@ export default function ProductSearch({
     }, 100);
   };
 
+  // A scan miss only means no variant matched the code exactly — the regular
+  // search may well list the product just below, so this stays a hint rather
+  // than an error, which would contradict the results on screen.
+  const notifyScanMiss = (code) => {
+    toast(`"${code}" bo'yicha aniq moslik yo'q — ro'yxatdan tanlang`, {
+      icon: '🔎',
+    });
+  };
+
   // Run a barcode scan for the given code. Shared by the debounced input
   // handler and the Enter key handler so a code is only scanned once it's
   // fully entered (hardware scanners burst characters, then send Enter).
@@ -168,13 +177,13 @@ export default function ProductSearch({
         handleAddToCart(scannedProduct, code);
       } else {
         // Keep the typed code: the exact-SKU lookup missed it, but the regular
-        // search may still match, so the dropdown stays useful. Clearing here
-        // used to wipe the input with no explanation.
-        toast.error(`"${code}" SKU bo'yicha mahsulot topilmadi`);
+        // search below may still match, so the dropdown stays useful. Clearing
+        // here used to wipe the input with no explanation.
+        notifyScanMiss(code);
       }
     } catch (error) {
       console.error('Barcode scan error:', error);
-      toast.error(error?.message || `"${code}" SKU bo'yicha mahsulot topilmadi`);
+      notifyScanMiss(code);
       setSelectedProduct(null);
       setScannedVariantSku(null);
       setShowVariantModal(false);

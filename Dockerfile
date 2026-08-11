@@ -1,5 +1,6 @@
-# Use the official Node.js 18 image
-FROM node:18-alpine AS builder
+# Node 20+ is required: vite@8 and @vitejs/plugin-react@6 declare
+# engines ^20.19.0 || >=22.12.0, so npm ci fails outright on Node 18.
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -17,7 +18,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production image, use a lightweight static server
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 

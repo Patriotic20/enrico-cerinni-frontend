@@ -34,6 +34,9 @@ RUN adduser --system --uid 1001 reactjs
 # Copy the built application from the builder stage
 COPY --from=builder --chown=reactjs:nodejs /app/dist ./dist
 
+# Copy package files so npm can resolve the project at runtime if needed
+COPY --chown=reactjs:nodejs package.json package-lock.json* ./
+
 # Copy the runtime entrypoint script and make it executable
 COPY --chown=reactjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh

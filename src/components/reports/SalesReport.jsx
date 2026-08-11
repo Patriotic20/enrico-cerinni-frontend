@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   Package,
   Users,
-  Calendar,
   Download,
   FileText,
   DollarSign
@@ -259,124 +258,6 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
           </div>
         </Card>
       </div>
-
-      {/* Detailed Sales Table */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Batafsil sotuv ma'lumotlari
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Barcha sotuvlarning to'liq ro'yxati
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Calendar size={16} />
-              Filtr
-            </Button>
-            <Button variant="outline" size="sm">
-              <FileText size={16} />
-              Excel
-            </Button>
-            <Button size="sm">
-              <Download size={16} />
-              PDF
-            </Button>
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sotuv ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sana
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mijoz
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mahsulotlar
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Summa
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  To'lov usuli
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Holat
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    #S{1000 + i}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    2024-01-{10 + i}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    Mijoz {i}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {Math.floor(Math.random() * 5) + 1} ta mahsulot
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {(Math.random() * 500000 + 50000).toLocaleString()} UZS
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {Math.random() > 0.5 ? 'Naqd' : 'Karta'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Bajarildi
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>Ko'rsatilmoqda:</span>
-            <select className="border border-gray-300 rounded px-2 py-1 text-sm">
-              <option>10</option>
-              <option>25</option>
-              <option>50</option>
-            </select>
-            <span>dan 1-10 gacha, jami 156 ta</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
-              Oldingi
-            </Button>
-            <Button variant="outline" size="sm" className="bg-blue-50 text-blue-600 border-blue-200">
-              1
-            </Button>
-            <Button variant="outline" size="sm">
-              2
-            </Button>
-            <Button variant="outline" size="sm">
-              3
-            </Button>
-            <Button variant="outline" size="sm">
-              Keyingi
-            </Button>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 };

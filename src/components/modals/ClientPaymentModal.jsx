@@ -5,6 +5,7 @@ import Input from '../forms/Input';
 import { AlertCircle, DollarSign, Search, User } from 'lucide-react';
 import { salesAPI } from '../../api/sales';
 import { clientsAPI } from '../../api/clients';
+import { getApiErrorMessage } from '../../utils/api';
 
 export default function ClientPaymentModal({ 
   isOpen, 
@@ -83,7 +84,7 @@ export default function ClientPaymentModal({
       }
     } catch (error) {
       console.error('Payment error:', error);
-      setError(error.response?.data?.detail || 'To\'lovni amalga oshirishda xatolik yuz berdi');
+      setError(getApiErrorMessage(error, 'To\'lovni amalga oshirishda xatolik yuz berdi'));
     } finally {
       setLoading(false);
     }

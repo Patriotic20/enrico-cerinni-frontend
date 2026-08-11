@@ -64,12 +64,28 @@ export const toArray = (payload) => {
 const BACKEND_MESSAGE_UZ = {
   'Cannot delete product with existing sales':
     'Bu mahsulotni o\'chirib bo\'lmaydi: u sotuvlarda ishlatilgan. Sotuv tarixini saqlash uchun o\'chirish bloklangan.',
+  'Client not found': 'Mijoz topilmadi',
+  'Payment amount exceeds debt amount':
+    'To\'lov summasi qarzdorlikdan ko\'p bo\'lishi mumkin emas',
+  'Payment amount must be greater than zero':
+    'To\'lov summasi noldan katta bo\'lishi kerak',
+  'Sale not found': 'Sotuv topilmadi',
+  'Internal server error':
+    'Serverda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko\'ring.',
 };
 
 export const getApiErrorMessage = (error, fallback = 'Xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.') => {
   // Interceptor rejects with wrapped { message }, raw axios errors carry response.data.message
   const raw = error?.message || error?.response?.data?.message || error?.response?.data?.detail;
-  return (raw && BACKEND_MESSAGE_UZ[raw]) || fallback;
+
+  if (raw && BACKEND_MESSAGE_UZ[raw]) return BACKEND_MESSAGE_UZ[raw];
+
+  // Network failures and timeouts never reach the backend, so there is no
+  // server message to translate — the interceptor already produced a localized
+  // one. Showing it beats the generic fallback, which hides the real cause.
+  if (raw && !error?.status && !error?.response) return raw;
+
+  return fallback;
 };
 
 export const validateApiResponse = (response) => {

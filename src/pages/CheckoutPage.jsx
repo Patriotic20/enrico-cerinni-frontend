@@ -100,6 +100,7 @@ const CheckoutContent = () => {
             isSearchFocused={checkout.isSearchFocused}
             setIsSearchFocused={checkout.setIsSearchFocused}
             addToCart={checkout.addToCart}
+            addManyToCart={checkout.addManyToCart}
             onBarcodeScan={checkout.handleBarcodeScan}
           />
 

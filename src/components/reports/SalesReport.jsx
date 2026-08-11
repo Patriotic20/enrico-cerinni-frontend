@@ -6,67 +6,87 @@
  */
 
 import { useState } from 'react';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  ShoppingCart, 
-  Package, 
+import {
+  TrendingUp,
+  ShoppingCart,
+  Package,
   Users,
   Calendar,
   Download,
   FileText,
   DollarSign
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 import { Card, Button } from '../ui';
 import { cn } from '../../utils/cn';
+import { formatCurrency } from '../../utils/format';
+
+// Decimal columns arrive from the API as strings, so every number has to be
+// parsed before it reaches a chart or a toLocaleString call.
+const toNumber = (value) => {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
   const [selectedMetric, setSelectedMetric] = useState('revenue');
 
-  // Mock data - replace with real API data
+  const metrics = data?.metrics || {};
+
   const salesMetrics = {
-    totalRevenue: 15420000,
-    totalSales: 1234,
-    avgOrderValue: 125000,
-    conversionRate: 3.2,
-    topProducts: [
-      { name: 'Ko\'ylak', sales: 45, revenue: 2250000 },
-      { name: 'Shim', sales: 38, revenue: 1900000 },
-      { name: 'Krossovka', sales: 32, revenue: 1600000 },
-      { name: 'Sumka', sales: 28, revenue: 1400000 },
-      { name: 'Shapka', sales: 22, revenue: 1100000 }
-    ],
-    salesTrend: [
-      { date: '2024-01-01', sales: 12, revenue: 600000 },
-      { date: '2024-01-02', sales: 18, revenue: 900000 },
-      { date: '2024-01-03', sales: 15, revenue: 750000 },
-      { date: '2024-01-04', sales: 22, revenue: 1100000 },
-      { date: '2024-01-05', sales: 28, revenue: 1400000 },
-      { date: '2024-01-06', sales: 25, revenue: 1250000 },
-      { date: '2024-01-07', sales: 32, revenue: 1600000 }
-    ]
+    totalRevenue: toNumber(metrics.total_revenue),
+    totalSales: toNumber(metrics.total_sales),
+    avgOrderValue: toNumber(metrics.avg_order_value),
+    conversionRate: toNumber(metrics.conversion_rate),
+    topProducts: (data?.top_products || []).map(product => ({
+      name: product.product_name,
+      variant: product.variant_name,
+      sales: toNumber(product.sales_count),
+      revenue: toNumber(product.total_revenue)
+    })),
+    salesTrend: (data?.sales_trend || []).map(point => ({
+      date: point.date,
+      sales: toNumber(point.sales_count),
+      revenue: toNumber(point.revenue)
+    }))
   };
 
-  const MetricCard = ({ title, value, change, changeType, icon: Icon, color }) => (
+  const isRevenueMetric = selectedMetric === 'revenue';
+
+  const formatTrendDate = (value) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return `${String(parsed.getDate()).padStart(2, '0')}.${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const formatTrendValue = (value) =>
+    isRevenueMetric ? formatCurrency(value) : `${value} ta`;
+
+  const TrendTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || payload.length === 0) return null;
+
+    return (
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="text-sm font-medium text-gray-900 mb-1">{formatTrendDate(label)}</p>
+        <p className="text-sm text-blue-600">{formatTrendValue(payload[0].value)}</p>
+      </div>
+    );
+  };
+
+  const MetricCard = ({ title, value, icon: Icon, color }) => (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
           <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <div className="flex items-center gap-1 mt-2">
-            {changeType === 'increase' ? (
-              <TrendingUp className="text-green-600" size={16} />
-            ) : (
-              <TrendingDown className="text-red-600" size={16} />
-            )}
-            <span className={cn(
-              'text-sm font-medium',
-              changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-            )}>
-              {change}
-            </span>
-            <span className="text-sm text-gray-500">o'tgan oyga nisbatan</span>
-          </div>
         </div>
         <div className={cn(
           'w-12 h-12 rounded-lg flex items-center justify-center',
@@ -84,33 +104,25 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard
           title="Umumiy daromad"
-          value={`${salesMetrics.totalRevenue.toLocaleString()} UZS`}
-          change="+12.5%"
-          changeType="increase"
+          value={formatCurrency(salesMetrics.totalRevenue)}
           icon={DollarSign}
           color="bg-gradient-to-r from-green-500 to-green-600"
         />
         <MetricCard
           title="Sotuvlar soni"
           value={salesMetrics.totalSales.toLocaleString()}
-          change="+8.3%"
-          changeType="increase"
           icon={ShoppingCart}
           color="bg-gradient-to-r from-blue-500 to-blue-600"
         />
         <MetricCard
           title="O'rtacha buyurtma"
-          value={`${salesMetrics.avgOrderValue.toLocaleString()} UZS`}
-          change="+5.2%"
-          changeType="increase"
+          value={formatCurrency(salesMetrics.avgOrderValue)}
           icon={Package}
           color="bg-gradient-to-r from-purple-500 to-purple-600"
         />
         <MetricCard
           title="Konversiya"
           value={`${salesMetrics.conversionRate}%`}
-          change="-1.2%"
-          changeType="decrease"
           icon={Users}
           color="bg-gradient-to-r from-orange-500 to-orange-600"
         />
@@ -126,7 +138,7 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                 Sotuv tendensiyasi
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                Oxirgi 7 kunlik sotuv ko'rsatkichlari
+                Tanlangan davrdagi kunlik sotuv ko'rsatkichlari
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -144,12 +156,58 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
             </div>
           </div>
           
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <TrendingUp className="mx-auto text-gray-400 mb-2" size={48} />
-              <p className="text-gray-500">Sotuv tendensiyasi grafigi</p>
-              <p className="text-xs text-gray-400 mt-1">Chart.js yoki Recharts bilan amalga oshiriladi</p>
-            </div>
+          {/* ResponsiveContainer sizes itself against its parent, so it must sit
+              directly inside the element that carries the height. */}
+          <div className="h-64">
+            {salesMetrics.salesTrend.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={salesMetrics.salesTrend}
+                  margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="salesTrendFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={formatTrendDate}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    width={isRevenueMetric ? 60 : 40}
+                    tickFormatter={(value) =>
+                      isRevenueMetric ? `${(value / 1000000).toFixed(1)}M` : value
+                    }
+                  />
+                  <Tooltip content={<TrendTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey={isRevenueMetric ? 'revenue' : 'sales'}
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    fill="url(#salesTrendFill)"
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
+                    name={isRevenueMetric ? 'Daromad' : 'Sotuvlar'}
+                    animationDuration={600}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full bg-gray-50 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <TrendingUp className="mx-auto text-gray-400 mb-2" size={48} />
+                  <p className="text-gray-500">Tanlangan davrda sotuvlar yo'q</p>
+                  <p className="text-xs text-gray-400 mt-1">Boshqa davrni tanlab ko'ring</p>
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -170,6 +228,11 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
           </div>
 
           <div className="space-y-4">
+            {salesMetrics.topProducts.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-8">
+                Tanlangan davrda sotuvlar yo'q
+              </p>
+            )}
             {salesMetrics.topProducts.map((product, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -180,12 +243,14 @@ const SalesReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-600">{product.sales} ta sotildi</p>
+                    <p className="text-sm text-gray-600">
+                      {product.variant ? `${product.variant} • ` : ''}{product.sales} ta sotildi
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">
-                    {product.revenue.toLocaleString()} UZS
+                    {formatCurrency(product.revenue)}
                   </p>
                   <p className="text-sm text-gray-600">daromad</p>
                 </div>

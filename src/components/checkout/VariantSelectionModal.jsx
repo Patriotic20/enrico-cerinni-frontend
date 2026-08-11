@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
-import { X, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Modal from '../modals/Modal';
 import Button from '../ui/Button';
 
+/**
+ * Variant picker for the checkout flow.
+ *
+ * Several variants can be selected at once — each confirmed variant becomes its
+ * own cart line. `onVariantSelect` therefore always receives an array, even for
+ * a single pick.
+ */
 export default function VariantSelectionModal({
   isOpen,
   onClose,
@@ -11,34 +18,33 @@ export default function VariantSelectionModal({
   scannedVariantSku = null,
   loading = false
 }) {
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  // Auto-select the scanned variant when modal opens
+  const getAvailableVariants = () => {
+    if (!product || !product.variants) {
+      return [];
+    }
+    return product.variants.filter(variant => variant.stock_quantity > 0);
+  };
+
+  const availableVariants = getAvailableVariants();
+
+  // Pre-select the scanned variant when the modal opens; reset on close.
   useEffect(() => {
     if (isOpen && scannedVariantSku && product?.variants) {
-      const scannedVariant = product.variants.find(variant => 
+      const scannedVariant = product.variants.find(variant =>
         variant.sku && variant.sku.toLowerCase() === scannedVariantSku.toLowerCase()
       );
       if (scannedVariant) {
-        setSelectedVariant(scannedVariant);
+        setSelectedIds([scannedVariant.id]);
       }
     } else if (!isOpen) {
-      // Reset selection when modal closes
-      setSelectedVariant(null);
+      setSelectedIds([]);
     }
   }, [isOpen, scannedVariantSku, product]);
 
-  // Debug logging
-  if (isOpen) {
-    console.log('VariantSelectionModal opened with product:', product);
-    console.log('Scanned variant SKU:', scannedVariantSku);
-  }
-
   // Don't render if product is null or doesn't have variants
   if (!product || !product.variants || product.variants.length === 0) {
-    if (isOpen) {
-      console.warn('VariantSelectionModal: No product or variants found but modal is open');
-    }
     return (
       <Modal
         isOpen={isOpen}
@@ -53,46 +59,55 @@ export default function VariantSelectionModal({
     );
   }
 
-  const handleVariantSelect = (variant) => {
-    setSelectedVariant(variant);
+  const isSelected = (variant) => selectedIds.includes(variant.id);
+  const allSelected = availableVariants.length > 0 && selectedIds.length === availableVariants.length;
+
+  const toggleVariant = (variant) => {
+    setSelectedIds(current =>
+      current.includes(variant.id)
+        ? current.filter(id => id !== variant.id)
+        : [...current, variant.id]
+    );
+  };
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? [] : availableVariants.map(variant => variant.id));
   };
 
   const handleConfirm = () => {
-    if (selectedVariant) {
-      const variantProduct = {
-        ...product,
-        id: selectedVariant.id,
-        price: selectedVariant.price,
-        stock_quantity: selectedVariant.stock_quantity,
-        sku: selectedVariant.sku,
-        color_name: selectedVariant.color_name,
-        size_name: selectedVariant.size_name,
-        variant_id: selectedVariant.id
-      };
-      onVariantSelect(variantProduct);
-      onClose();
+    if (selectedIds.length === 0) {
+      return;
     }
-  };
 
-  const getAvailableVariants = () => {
-    if (!product || !product.variants) {
-      return [];
-    }
-    return product.variants.filter(variant => variant.stock_quantity > 0);
+    // Keep the on-screen order rather than the order the user clicked in.
+    const variantProducts = availableVariants
+      .filter(variant => selectedIds.includes(variant.id))
+      .map(variant => ({
+        ...product,
+        id: variant.id,
+        price: variant.price,
+        stock_quantity: variant.stock_quantity,
+        sku: variant.sku,
+        color_name: variant.color_name,
+        size_name: variant.size_name,
+        variant_id: variant.id
+      }));
+
+    onVariantSelect(variantProducts);
+    onClose();
   };
 
   const getColorVariants = () => {
-    const variants = getAvailableVariants();
     const colorGroups = {};
-    
-    variants.forEach(variant => {
+
+    availableVariants.forEach(variant => {
       const colorName = variant.color_name || 'Noma\'lum';
       if (!colorGroups[colorName]) {
         colorGroups[colorName] = [];
       }
       colorGroups[colorName].push(variant);
     });
-    
+
     return colorGroups;
   };
 
@@ -112,6 +127,23 @@ export default function VariantSelectionModal({
           </p>
         </div>
 
+        {/* Selection summary */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            {selectedIds.length > 0
+              ? `${selectedIds.length} ta variant tanlandi`
+              : 'Bir nechta variantni tanlash mumkin'}
+          </p>
+          <button
+            type="button"
+            onClick={toggleAll}
+            disabled={loading || availableVariants.length === 0}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {allSelected ? 'Tanlovni tozalash' : 'Hammasini tanlash'}
+          </button>
+        </div>
+
         {/* Variants */}
         <div className="space-y-4">
           {Object.entries(getColorVariants()).map(([colorName, variants]) => (
@@ -121,12 +153,14 @@ export default function VariantSelectionModal({
                 {variants.map(variant => (
                   <button
                     key={variant.id}
+                    type="button"
+                    aria-pressed={isSelected(variant)}
                     className={`relative p-2 border-2 rounded-lg text-left transition-all duration-200 ${
-                      selectedVariant?.id === variant.id 
-                        ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md' 
+                      isSelected(variant)
+                        ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
                         : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                     } ${variant.stock_quantity <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    onClick={() => handleVariantSelect(variant)}
+                    onClick={() => toggleVariant(variant)}
                     disabled={variant.stock_quantity <= 0 || loading}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -137,7 +171,7 @@ export default function VariantSelectionModal({
                       <span className="text-xs text-gray-500">
                         {variant.stock_quantity} dona
                       </span>
-                      {selectedVariant?.id === variant.id && (
+                      {isSelected(variant) && (
                         <Check size={16} className="text-blue-600" />
                       )}
                     </div>
@@ -160,14 +194,14 @@ export default function VariantSelectionModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!selectedVariant || loading}
+            disabled={selectedIds.length === 0 || loading}
             loading={loading}
             fullWidth
           >
-            Tanlash
+            {selectedIds.length > 1 ? `Tanlash (${selectedIds.length})` : 'Tanlash'}
           </Button>
         </div>
       </div>
     </Modal>
   );
-} 
+}

@@ -19,18 +19,22 @@ export default function DebtPaymentModal({
   // Ensure currentDebt is always a number
   const debtAmount = Number(currentDebt) || 0;
 
+  // The input keeps its raw text so clearing the field leaves it empty rather
+  // than snapping back to 0; every calculation uses the parsed value.
+  const amount = Number(paymentAmount) || 0;
+
   // Don't render if no client is provided
   if (!client) {
     return null;
   }
 
   const handlePayment = async () => {
-    if (!paymentAmount || paymentAmount <= 0) {
+    if (amount <= 0) {
       setError('Iltimos, to\'lov summasini kiriting');
       return;
     }
 
-    if (paymentAmount > debtAmount) {
+    if (amount > debtAmount) {
       setError('To\'lov summasi qarzdorlikdan ko\'p bo\'lishi mumkin emas');
       return;
     }
@@ -39,10 +43,10 @@ export default function DebtPaymentModal({
     setError('');
 
     try {
-      const response = await salesAPI.processDebtPayment(client.id, paymentAmount);
+      const response = await salesAPI.processDebtPayment(client.id, amount);
       
       if (response.success) {
-        onPaymentComplete(paymentAmount, response.data.new_debt_amount);
+        onPaymentComplete(amount, response.data?.new_debt_amount);
         onClose();
         setPaymentAmount('');
       } else {
@@ -111,22 +115,22 @@ export default function DebtPaymentModal({
             min="0"
             max={debtAmount}
             value={paymentAmount}
-            onChange={(e) => setPaymentAmount(Number(e.target.value))}
+            onChange={(e) => setPaymentAmount(e.target.value)}
             placeholder="To'lov miqdorini kiriting"
             icon={DollarSign}
             className="text-sm"
           />
 
-          {paymentAmount > 0 && (
+          {amount > 0 && (
             <div className="bg-green-50 rounded-lg p-3 border border-green-200">
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-green-600 font-medium block">To'lanadi</span>
-                  <span className="text-green-700 font-bold">{paymentAmount.toLocaleString()} UZS</span>
+                  <span className="text-green-700 font-bold">{amount.toLocaleString()} UZS</span>
                 </div>
                 <div>
                   <span className="text-orange-600 font-medium block">Qoladi</span>
-                  <span className="text-orange-700 font-bold">{(debtAmount - paymentAmount).toLocaleString()} UZS</span>
+                  <span className="text-orange-700 font-bold">{(debtAmount - amount).toLocaleString()} UZS</span>
                 </div>
               </div>
             </div>
@@ -146,7 +150,7 @@ export default function DebtPaymentModal({
         <div className="flex gap-2 pt-2">
           <Button
             onClick={handlePayment}
-            disabled={loading || !paymentAmount || paymentAmount <= 0}
+            disabled={loading || amount <= 0 || amount > debtAmount}
             loading={loading}
             className="flex-1"
             size="sm"

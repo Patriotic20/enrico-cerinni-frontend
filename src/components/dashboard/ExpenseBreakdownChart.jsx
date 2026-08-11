@@ -87,7 +87,7 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
             </div>
           )}
           
-          <div className={`transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
+          <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

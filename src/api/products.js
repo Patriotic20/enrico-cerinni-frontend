@@ -66,17 +66,4 @@ export const productsAPI = {
       throw error;
     }
   },
-
-  // Update product stock
-  updateStock: async (productId, stockQuantity) => {
-    try {
-      const response = await api.patch(`/products/${productId}/stock`, {
-        stock_quantity: stockQuantity
-      });
-      return validateApiResponse(response.data);
-    } catch (error) {
-      console.error('Update stock API error:', error);
-      throw error;
-    }
-  },
-}; 
+};

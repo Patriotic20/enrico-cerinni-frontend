@@ -138,84 +138,16 @@ export const exportReport = async (exportRequest) => {
   return request(api.post(`${REPORTS_BASE_URL}/export`, exportRequest));
 };
 
-// Test endpoints (without authentication)
-export const testApi = {
-  /**
-   * Test sales report endpoint
-   * @param {Object} filters - Report filters
-   * @returns {Promise<Object>} Sales report data
-   */
-  getSalesReport: async (filters = {}) => {
-    const params = {};
-    
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    
-    return request(api.get(`${REPORTS_BASE_URL}/test/sales`, { params }));
-  },
-
-  /**
-   * Test finance report endpoint
-   * @param {Object} filters - Report filters
-   * @returns {Promise<Object>} Finance report data
-   */
-  getFinanceReport: async (filters = {}) => {
-    const params = {};
-    
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    
-    return request(api.get(`${REPORTS_BASE_URL}/test/finance`, { params }));
-  },
-
-  /**
-   * Test inventory report endpoint
-   * @returns {Promise<Object>} Inventory report data
-   */
-  getInventoryReport: async () => {
-    return request(api.get(`${REPORTS_BASE_URL}/test/inventory`));
-  },
-
-  /**
-   * Test clients report endpoint
-   * @param {Object} filters - Report filters
-   * @returns {Promise<Object>} Clients report data
-   */
-  getClientsReport: async (filters = {}) => {
-    const params = {};
-    
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    
-    return request(api.get(`${REPORTS_BASE_URL}/test/clients`, { params }));
-  },
-
-  /**
-   * Test performance report endpoint
-   * @param {Object} filters - Report filters
-   * @returns {Promise<Object>} Performance report data
-   */
-  getPerformanceReport: async (filters = {}) => {
-    const params = {};
-    
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    
-    return request(api.get(`${REPORTS_BASE_URL}/test/performance`, { params }));
-  }
-};
-
 // Utility functions for common report operations
 export const reportUtils = {
   /**
    * Get report data by type
    * @param {string} reportType - Type of report
    * @param {Object} filters - Report filters
-   * @param {boolean} useTestApi - Whether to use test API endpoints
    * @returns {Promise<Object>} Report data
    */
-  getReportByType: async (reportType, filters = {}, useTestApi = false) => {
-    const api = useTestApi ? testApi : {
+  getReportByType: async (reportType, filters = {}) => {
+    const api = {
       getSalesReport,
       getFinanceReport,
       getInventoryReport,

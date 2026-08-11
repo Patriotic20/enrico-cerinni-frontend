@@ -13,12 +13,13 @@
 # testing
 /coverage
 
-# next.js
+# build output
+/dist
+/build
+
+# leftover Next.js build cache from before the Vite migration (safe to delete)
 /.next/
 /out/
-
-# production
-/build
 
 # misc
 .DS_Store
@@ -49,4 +50,6 @@ cookies.txt
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# playwright
+.playwright-mcp/

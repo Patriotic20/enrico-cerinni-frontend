@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productsAPI } from '../api';
+import { toArray } from '../utils/api';
 import { SEARCH_CONFIG } from '../utils/constants';
 
 export const useProductSearch = () => {
@@ -22,12 +23,7 @@ export const useProductSearch = () => {
         size: SEARCH_CONFIG.MAX_LIMIT // Use MAX_LIMIT for search to show more results
       });
       
-      if (response.success && response.data) {
-        const availableProducts = (response.data.items || []);
-        setSearchResults(availableProducts);
-      } else {
-        setSearchResults([]);
-      }
+      setSearchResults(response.success ? toArray(response.data) : []);
     } catch (error) {
       console.error('Error searching products:', error);
       setSearchResults([]);
@@ -46,12 +42,7 @@ export const useProductSearch = () => {
         sort_order: 'desc'
       });
 
-      if (response.success && response.data) {
-        const availableProducts = (response.data.items || []);
-        setSearchResults(availableProducts);
-      } else {
-        setSearchResults([]);
-      }
+      setSearchResults(response.success ? toArray(response.data) : []);
     } catch (error) {
       console.error('Error loading recent products:', error);
       setSearchResults([]);
@@ -60,12 +51,9 @@ export const useProductSearch = () => {
     }
   }, []);
 
-  // Load recent products on component mount
-  useEffect(() => {
-    getRecentProducts();
-  }, [getRecentProducts]);
-
-  // Debounced search effect
+  // Debounced search effect. It also covers the initial load (empty term falls
+  // through to getRecentProducts), so no separate mount effect is needed —
+  // having both fired the same request twice on every mount.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchTerm.trim()) {

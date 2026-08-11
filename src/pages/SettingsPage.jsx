@@ -12,6 +12,7 @@ import SeasonModal from '../components/SeasonModal';
 import Modal from '../components/modals/Modal';
 import { settingsAPI } from '../api';
 import { cn } from '../utils/cn';
+import toast from 'react-hot-toast';
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('categories');
@@ -134,7 +135,7 @@ const SettingsPage = () => {
       setShowAddModal(false);
     } catch (error) {
       console.error(`Error creating ${activeTab}:`, error);
-      alert(`${tabs.find(tab => tab.id === activeTab).name} yaratishda xatolik yuz berdi.`);
+      toast.error(`${tabs.find(tab => tab.id === activeTab).name} yaratishda xatolik yuz berdi.`);
     }
   };
 
@@ -167,7 +168,7 @@ const SettingsPage = () => {
       setSelectedItem(null);
     } catch (error) {
       console.error(`Error updating ${activeTab}:`, error);
-      alert(`${tabs.find(tab => tab.id === activeTab).name} yangilashda xatolik yuz berdi.`);
+      toast.error(`${tabs.find(tab => tab.id === activeTab).name} yangilashda xatolik yuz berdi.`);
     }
   };
 
@@ -199,7 +200,7 @@ const SettingsPage = () => {
       setSelectedItem(null);
     } catch (error) {
       console.error(`Error deleting ${activeTab}:`, error);
-      alert(`${tabs.find(tab => tab.id === activeTab).name} o'chirishda xatolik yuz berdi.`);
+      toast.error(`${tabs.find(tab => tab.id === activeTab).name} o'chirishda xatolik yuz berdi.`);
     }
   };
 

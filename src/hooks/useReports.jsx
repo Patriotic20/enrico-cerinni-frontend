@@ -29,9 +29,8 @@ export const useReports = (initialReportType = 'sales') => {
       logger.info(`Generating ${reportType} report`, { filters: reportFilters, options });
       
       const response = await reportsAPI.reportUtils.getReportByType(
-        reportType, 
-        reportFilters, 
-        options.useTestApi || false
+        reportType,
+        reportFilters
       );
       
       if (response.success) {
@@ -56,36 +55,36 @@ export const useReports = (initialReportType = 'sales') => {
   /**
    * Generate sales report
    */
-  const generateSalesReport = useCallback(async (reportFilters = {}, useTestApi = false) => {
-    return generateReport('sales', reportFilters, { useTestApi });
+  const generateSalesReport = useCallback(async (reportFilters = {}) => {
+    return generateReport('sales', reportFilters);
   }, [generateReport]);
 
   /**
    * Generate finance report
    */
-  const generateFinanceReport = useCallback(async (reportFilters = {}, useTestApi = false) => {
-    return generateReport('finance', reportFilters, { useTestApi });
+  const generateFinanceReport = useCallback(async (reportFilters = {}) => {
+    return generateReport('finance', reportFilters);
   }, [generateReport]);
 
   /**
    * Generate inventory report
    */
-  const generateInventoryReport = useCallback(async (useTestApi = false) => {
-    return generateReport('inventory', {}, { useTestApi });
+  const generateInventoryReport = useCallback(async () => {
+    return generateReport('inventory', {});
   }, [generateReport]);
 
   /**
    * Generate clients report
    */
-  const generateClientsReport = useCallback(async (reportFilters = {}, useTestApi = false) => {
-    return generateReport('clients', reportFilters, { useTestApi });
+  const generateClientsReport = useCallback(async (reportFilters = {}) => {
+    return generateReport('clients', reportFilters);
   }, [generateReport]);
 
   /**
    * Generate performance report
    */
-  const generatePerformanceReport = useCallback(async (reportFilters = {}, useTestApi = false) => {
-    return generateReport('performance', reportFilters, { useTestApi });
+  const generatePerformanceReport = useCallback(async (reportFilters = {}) => {
+    return generateReport('performance', reportFilters);
   }, [generateReport]);
 
   /**
@@ -267,8 +266,8 @@ export const useReports = (initialReportType = 'sales') => {
 export const useReportType = (reportType) => {
   const reports = useReports(reportType);
 
-  const generateCurrentReport = useCallback(async (reportFilters = {}, useTestApi = false) => {
-    return reports.generateReport(reportType, reportFilters, { useTestApi });
+  const generateCurrentReport = useCallback(async (reportFilters = {}) => {
+    return reports.generateReport(reportType, reportFilters);
   }, [reports.generateReport, reportType]);
 
   return {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   ShoppingCart, 
@@ -15,12 +15,11 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { NAVIGATION_ITEMS, SETTINGS_ITEMS, ROUTES } from '../../utils/constants';
+import { NAVIGATION_ITEMS, ROUTES } from '../../utils/constants';
 
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const pathname = useLocation().pathname;
 
   const iconMap = {
@@ -36,42 +35,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     BarChart3,
   };
 
-  const handleNavigation = (href) => {
-    navigate(href);
-    onClose();
-  };
-
   const handleLogout = () => {
     logout();
-  };
-
-  const handleSettingsAction = (action) => {
-    switch (action) {
-      case 'settings':
-        navigate(ROUTES.SETTINGS);
-        break;
-      case 'systemConfig':
-        alert('System Configuration page - to be implemented');
-        break;
-      case 'userManagement':
-        alert('User Management page - to be implemented');
-        break;
-      default:
-        break;
-    }
-    onClose();
-  };
-
-  const getPageTitle = () => {
-    const navItem = NAVIGATION_ITEMS.find(item => item.href === pathname);
-    if (navItem) return navItem.name;
-    
-    if (pathname.includes('/settings')) return 'Sozlamalar';
-    if (pathname.includes('/sales')) return 'Sotuvlar tarixi';
-    if (pathname.includes('/debts')) return 'Qarzdorliklar';
-    if (pathname.includes('/reports')) return 'Hisobotlar';
-    
-    return 'Boshqaruv paneli';
   };
 
   return (
@@ -107,23 +72,24 @@ const Sidebar = ({ isOpen, onClose }) => {
             {NAVIGATION_ITEMS.map((item) => {
               const Icon = iconMap[item.icon];
               const isActive = pathname === item.href;
-              
+
               return (
-                <button
+                <Link
                   key={item.name}
-                  className={`flex items-center gap-2 px-2 py-2 w-full text-left rounded-lg transition-all duration-200 border-none cursor-pointer text-sm font-medium group ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md' 
+                  to={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-2 px-2 py-2 w-full text-left rounded-lg transition-all duration-200 cursor-pointer text-sm font-medium group ${
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
-                  onClick={() => handleNavigation(item.href)}
                 >
-                  <Icon 
-                    size={18} 
-                    className={`transition-transform duration-200 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'}`} 
+                  <Icon
+                    size={18}
+                    className={`transition-transform duration-200 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'}`}
                   />
                   <span className="font-medium">{item.name}</span>
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -131,20 +97,21 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Settings Section */}
           <div className="border-t border-gray-200 mt-4 pt-4">
             <div className="px-3">
-              <button
-                className={`flex items-center gap-2 px-2 py-2 w-full text-left rounded-lg transition-all duration-200 border-none cursor-pointer text-sm font-medium group ${
-                  pathname === ROUTES.SETTINGS 
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md' 
+              <Link
+                to={ROUTES.SETTINGS}
+                onClick={onClose}
+                className={`flex items-center gap-2 px-2 py-2 w-full text-left rounded-lg transition-all duration-200 cursor-pointer text-sm font-medium group ${
+                  pathname === ROUTES.SETTINGS
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
-                onClick={() => handleNavigation(ROUTES.SETTINGS)}
               >
-                <Settings 
-                  size={18} 
-                  className={`transition-transform duration-200 ${pathname === ROUTES.SETTINGS ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'}`} 
+                <Settings
+                  size={18}
+                  className={`transition-transform duration-200 ${pathname === ROUTES.SETTINGS ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'}`}
                 />
                 <span className="font-medium">Sozlamalar</span>
-              </button>
+              </Link>
             </div>
           </div>
         </nav>

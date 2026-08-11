@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 
 const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     position: '',
     phone: '',
     email: '',
@@ -18,30 +19,22 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const positions = [
-    { value: 'manager', label: 'Menejer' },
-    { value: 'salesperson', label: 'Sotuvchi' },
-    { value: 'cashier', label: 'Kassir' },
-    { value: 'stockkeeper', label: 'Sklavchi' },
-    { value: 'cleaner', label: 'Tozalovchi' },
-    { value: 'security', label: 'Qo\'riqlovchi' },
-    { value: 'other', label: 'Boshqa' }
-  ];
-
   useEffect(() => {
     if (employee) {
       setFormData({
-        name: employee.name || '',
+        first_name: employee.first_name || '',
+        last_name: employee.last_name || '',
         position: employee.position || '',
         phone: employee.phone || '',
         email: employee.email || '',
         salary: employee.salary || '',
-        hire_date: employee.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        is_active: employee.status === 'active',
+        hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        is_active: employee.is_active ?? true,
       });
     } else {
       setFormData({
-        name: '',
+        first_name: '',
+        last_name: '',
         position: '',
         phone: '',
         email: '',
@@ -56,12 +49,16 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Xodim ismi kiritilishi shart';
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = 'Xodim ismi kiritilishi shart';
     }
 
-    if (!formData.position) {
-      newErrors.position = 'Lavozim tanlang';
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = 'Familiya kiritilishi shart';
+    }
+
+    if (!formData.position.trim()) {
+      newErrors.position = 'Lavozim kiritilishi shart';
     }
 
     if (!formData.phone.trim()) {
@@ -96,7 +93,8 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
 
       // Format data for API
       const apiData = {
-        name: formData.name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         position: formData.position,
         phone: formData.phone || null,
         email: formData.email || null,
@@ -146,44 +144,57 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="name" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor="first_name" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
               <Users size={14} className="text-blue-500" />
-              Xodim ismi *
+              Ism *
             </label>
             <input
               type="text"
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              id="first_name"
+              value={formData.first_name}
+              onChange={(e) => handleInputChange('first_name', e.target.value)}
               placeholder="Ism"
               className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
-                errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                errors.first_name ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
             />
-            {errors.name && <span className="text-red-600 text-xs mt-0.5 block">{errors.name}</span>}
+            {errors.first_name && <span className="text-red-600 text-xs mt-0.5 block">{errors.first_name}</span>}
           </div>
 
           <div>
-            <label htmlFor="position" className="block text-xs font-medium text-gray-700 mb-1">
-              Lavozim *
+            <label htmlFor="last_name" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+              <Users size={14} className="text-blue-500" />
+              Familiya *
             </label>
-            <select
-              id="position"
-              value={formData.position}
-              onChange={(e) => handleInputChange('position', e.target.value)}
+            <input
+              type="text"
+              id="last_name"
+              value={formData.last_name}
+              onChange={(e) => handleInputChange('last_name', e.target.value)}
+              placeholder="Familiya"
               className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
-                errors.position ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                errors.last_name ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
-            >
-              <option value="">Lavozim tanlang</option>
-              {positions.map(position => (
-                <option key={position.value} value={position.value}>
-                  {position.label}
-                </option>
-              ))}
-            </select>
-            {errors.position && <span className="text-red-600 text-xs mt-0.5 block">{errors.position}</span>}
+            />
+            {errors.last_name && <span className="text-red-600 text-xs mt-0.5 block">{errors.last_name}</span>}
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="position" className="block text-xs font-medium text-gray-700 mb-1">
+            Lavozim *
+          </label>
+          <input
+            type="text"
+            id="position"
+            value={formData.position}
+            onChange={(e) => handleInputChange('position', e.target.value)}
+            placeholder="Masalan: Do'kon menejeri"
+            className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
+              errors.position ? 'border-red-300 bg-red-50' : 'border-gray-300'
+            }`}
+          />
+          {errors.position && <span className="text-red-600 text-xs mt-0.5 block">{errors.position}</span>}
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Edit, Trash2, Plus, Save, X, Package, Tag, Palette, Hash, DollarSign } from 'lucide-react';
 import Button from '../ui/Button';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import toast from 'react-hot-toast';
 
 export default function ProductVariants({ 
   variants = [], 
@@ -11,6 +13,7 @@ export default function ProductVariants({
 }) {
   const [editingVariant, setEditingVariant] = useState(null);
   const [editData, setEditData] = useState({});
+  const confirm = useConfirm();
 
   const handleEdit = (variant) => {
     setEditingVariant(variant.id);
@@ -29,7 +32,7 @@ export default function ProductVariants({
         setEditingVariant(null);
         setEditData({});
       } else {
-        alert(result.error || 'Variant yangilanmadi');
+        toast.error(result.error || 'Variant yangilanmadi');
       }
     }
   };
@@ -40,11 +43,18 @@ export default function ProductVariants({
   };
 
   const handleDelete = async (variantId) => {
-    if (!confirm('Bu variantni o\'chirishni xohlaysizmi?')) return;
-    
+    const confirmed = await confirm({
+      title: 'Variantni o\'chirish',
+      message: 'Bu variantni o\'chirishni xohlaysizmi?',
+      description: 'Bu amalni qaytarib bo\'lmaydi.',
+      confirmText: 'Ha, o\'chirish',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
     const result = await onDeleteVariant(variantId);
     if (!result.success) {
-      alert(result.error || 'Variant o\'chirilmadi');
+      toast.error(result.error || 'Variant o\'chirilmadi');
     }
   };
 

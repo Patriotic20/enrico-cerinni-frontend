@@ -5,7 +5,7 @@ export const dashboardAPI = {
   // Get dashboard statistics
   getStats: async () => {
     try {
-      const response = await api.get('/dashboard/test/stats');
+      const response = await api.get('/dashboard/stats');
       return validateApiResponse(response.data);
     } catch (error) {
       console.error('Dashboard stats API error:', error);
@@ -16,7 +16,7 @@ export const dashboardAPI = {
   // Get recent transactions
   getRecentTransactions: async (limit = 10) => {
     try {
-      const response = await api.get('/dashboard/test/recent-transactions', {
+      const response = await api.get('/dashboard/recent-transactions', {
         params: { limit }
       });
       return validateApiResponse(response.data);
@@ -44,7 +44,7 @@ export const dashboardAPI = {
   // Get cashflow data for charts
   getCashflowData: async (period = '1month') => {
     try {
-      const response = await api.get('/dashboard/test/cashflow', {
+      const response = await api.get('/dashboard/cashflow', {
         params: { period }
       });
       return validateApiResponse(response.data);
@@ -57,7 +57,7 @@ export const dashboardAPI = {
   // Get profit analysis data
   getProfitData: async (period = '1month') => {
     try {
-      const response = await api.get('/dashboard/test/profit-analysis', {
+      const response = await api.get('/dashboard/profit-analysis', {
         params: { period }
       });
       return validateApiResponse(response.data);
@@ -70,7 +70,7 @@ export const dashboardAPI = {
   // Get sales performance data
   getSalesPerformanceData: async (period = '1month') => {
     try {
-      const response = await api.get('/dashboard/test/sales-performance', {
+      const response = await api.get('/dashboard/sales-performance', {
         params: { period }
       });
       return validateApiResponse(response.data);
@@ -83,7 +83,7 @@ export const dashboardAPI = {
   // Get expense breakdown data
   getExpenseBreakdownData: async (period = '1month') => {
     try {
-      const response = await api.get('/dashboard/test/expense-breakdown', {
+      const response = await api.get('/dashboard/expense-breakdown', {
         params: { period }
       });
       return validateApiResponse(response.data);

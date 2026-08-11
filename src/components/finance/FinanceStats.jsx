@@ -36,7 +36,7 @@ const FinanceStats = ({ stats, formatCurrency }) => {
     {
       title: 'Kunlik xarajatlar',
       value: stats.dailyExpenses,
-      subtitle: 'O\'rtacha',
+      subtitle: 'Xarajatlar',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',

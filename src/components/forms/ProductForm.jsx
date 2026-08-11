@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Scan, X, Package, Tag, Hash, FileText, Calendar, Zap } from 'lucide-react';
 import Button from '../ui/Button';
+import toast from 'react-hot-toast';
 
 const ProductForm = ({ product, brands, categories, seasons, onSubmit, onCancel, loading = false }) => {
   const [formData, setFormData] = useState({
@@ -40,19 +41,19 @@ const ProductForm = ({ product, brands, categories, seasons, onSubmit, onCancel,
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      alert('Mahsulot nomi talab qilinadi');
+      toast.error('Mahsulot nomi talab qilinadi');
       return;
     }
     if (!formData.brand_id) {
-      alert('Brend tanlash talab qilinadi');
+      toast.error('Brend tanlash talab qilinadi');
       return;
     }
     if (!formData.category_id) {
-      alert('Kategoriya tanlash talab qilinadi');
+      toast.error('Kategoriya tanlash talab qilinadi');
       return;
     }
     if (!formData.season_id) {
-      alert('Fasl tanlash talab qilinadi');
+      toast.error('Fasl tanlash talab qilinadi');
       return;
     }
 

@@ -12,6 +12,7 @@ export default function ProductSearch({
   isSearchFocused,
   setIsSearchFocused,
   addToCart,
+  addManyToCart,
   onBarcodeScan
 }) {
   const [showVariantModal, setShowVariantModal] = useState(false);
@@ -126,8 +127,16 @@ export default function ProductSearch({
     }
   };
 
-  const handleVariantSelect = (variantProduct) => {
-    addToCart(variantProduct);
+  // The modal always hands back an array — one cart line per chosen variant.
+  const handleVariantSelect = (variantProducts) => {
+    const selected = Array.isArray(variantProducts) ? variantProducts : [variantProducts];
+
+    if (addManyToCart) {
+      addManyToCart(selected);
+    } else {
+      selected.forEach(addToCart);
+    }
+
     setShowVariantModal(false);
     // Clear search and refocus after adding variant
     setSearchTerm('');

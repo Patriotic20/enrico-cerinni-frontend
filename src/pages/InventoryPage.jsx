@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Edit, Trash2, Eye, Palette, Ruler } from 'lucide-react';
 import Layout from '../components/layout/Layout';
@@ -12,7 +12,11 @@ import ProductForm from '../components/forms/ProductForm';
 import ProductVariantForm from '../components/forms/ProductVariantForm';
 import { productsAPI, brandsAPI, colorsAPI, seasonsAPI, sizesAPI, productVariantsAPI, settingsAPI } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { toArray } from '../utils/api';
+import { SEARCH_CONFIG } from '../utils/constants';
 import { cn } from '../utils/cn';
+import toast from 'react-hot-toast';
 
 // Simple cache for filter options
 const filterCache = {
@@ -28,9 +32,15 @@ const filterCache = {
   }
 };
 
+const EMPTY_PAGINATION = { page: 1, size: 0, total: 0, pages: 0 };
+
 // Custom hook for inventory data management
 const useInventoryData = () => {
   const [products, setProducts] = useState([]);
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+  // Total ignoring filters, used for the "all products" counter in the header.
+  // Only refreshed on unfiltered queries so filtering does not rewrite it.
+  const [totalProducts, setTotalProducts] = useState(0);
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [seasons, setSeasons] = useState([]);
@@ -40,86 +50,62 @@ const useInventoryData = () => {
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load products first (critical data)
-  const loadProducts = useCallback(async () => {
+  // Remembers the last query so mutations can reload the very same page.
+  const lastQueryRef = useRef({ page: 1, size: SEARCH_CONFIG.DEFAULT_LIMIT });
+  // Guards against a slow response for stale filters overwriting a newer one.
+  const requestIdRef = useRef(0);
+
+  /**
+   * Fetch a single page from the server.
+   *
+   * Filtering, searching and paging all happen server-side: the page only ever
+   * holds the rows it displays, so inventory size no longer drives load time.
+   */
+  const loadProducts = useCallback(async (query = {}) => {
+    const params = { page: 1, size: SEARCH_CONFIG.DEFAULT_LIMIT, ...query };
+    lastQueryRef.current = params;
+
+    const requestId = ++requestIdRef.current;
+
     try {
       setProductsLoading(true);
       setError(null);
-      
-      console.log('🔄 Loading ALL products by fetching all pages...');
-      
-      // First, get the first page to understand pagination structure
-      const firstPageRes = await productsAPI.getProducts({ page: 1, size: 100 });
-      console.log('📦 First page response:', firstPageRes);
-      
-      if (!firstPageRes.success || !firstPageRes.data) {
-        throw new Error('Failed to fetch first page');
+
+      const response = await productsAPI.getProducts(params);
+
+      // A newer request has been issued in the meantime — drop this result.
+      if (requestId !== requestIdRef.current) return;
+
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch products');
       }
-      
-      const pagination = firstPageRes.data.pagination;
-      const totalPages = pagination?.pages || 1;
-      const totalItems = pagination?.total || firstPageRes.data.items?.length || 0;
-      
-      console.log('📊 Pagination info:', { totalPages, totalItems });
-      
-      // If there's only one page or we got all items, use what we have
-      if (totalPages <= 1 || firstPageRes.data.items?.length >= totalItems) {
-        console.log('✅ All products in first page');
-        var productsRes = firstPageRes;
-      } else {
-        // Fetch all pages
-        console.log('🔄 Fetching all', totalPages, 'pages...');
-        const allItems = [...firstPageRes.data.items];
-        
-        // Fetch remaining pages in parallel
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(productsAPI.getProducts({ page, size: 100 }));
-        }
-        
-        const pageResults = await Promise.all(pagePromises);
-        
-        // Combine all items
-        pageResults.forEach((pageRes, index) => {
-          if (pageRes.success && pageRes.data?.items) {
-            allItems.push(...pageRes.data.items);
-            console.log(`📄 Page ${index + 2}: ${pageRes.data.items.length} items`);
-          }
-        });
-        
-        console.log('🎯 Total items collected:', allItems.length);
-        
-        // Create combined response
-        var productsRes = {
-          ...firstPageRes,
-          data: {
-            ...firstPageRes.data,
-            items: allItems
-          }
-        };
-      }
-      
-      console.log('📦 API Response:', {
-        success: productsRes.success,
-        dataExists: !!productsRes.data,
-        itemsLength: productsRes.data?.items?.length,
-        totalFromAPI: productsRes.data?.total,
-        fullResponse: productsRes
-      });
-      
-      if (productsRes.success && productsRes.data) {
-        const items = productsRes.data.items || [];
-        console.log('✅ Setting products:', items.length, 'items');
-        setProducts(items);
-      } else {
-        console.log('❌ API response failed or no data');
-        setProducts([]);
+
+      const items = toArray(response.data);
+      const pageInfo = response.data?.pagination || {
+        ...EMPTY_PAGINATION,
+        page: params.page,
+        size: params.size,
+        total: items.length,
+        pages: 1,
+      };
+
+      setProducts(items);
+      setPagination(pageInfo);
+
+      const isUnfiltered = !params.search && !params.brand_id && !params.season_id && !params.category_id;
+      if (isUnfiltered) {
+        setTotalProducts(pageInfo.total ?? items.length);
       }
     } catch (err) {
-      console.error('❌ Error loading products:', err);
+      if (requestId !== requestIdRef.current) return;
+      console.error('Error loading products:', err);
       setError('Mahsulotlarni yuklashda xatolik yuz berdi');
+      setProducts([]);
+      setPagination(EMPTY_PAGINATION);
     } finally {
-      setProductsLoading(false);
+      if (requestId === requestIdRef.current) {
+        setProductsLoading(false);
+      }
     }
   }, []);
 
@@ -148,26 +134,27 @@ const useInventoryData = () => {
         sizesAPI.getSizes()
       ]);
 
-      // Update state and cache
-      if (brandsRes.success && brandsRes.data) {
-        setBrands(brandsRes.data);
-        filterCache.brands = brandsRes.data;
+      // Update state and cache. toArray keeps a changed response shape from
+      // taking the page down: these values are rendered with .map below.
+      if (brandsRes.success) {
+        filterCache.brands = toArray(brandsRes.data);
+        setBrands(filterCache.brands);
       }
-      if (categoriesRes.success && categoriesRes.data) {
-        setCategories(categoriesRes.data);
-        filterCache.categories = categoriesRes.data;
+      if (categoriesRes.success) {
+        filterCache.categories = toArray(categoriesRes.data);
+        setCategories(filterCache.categories);
       }
-      if (seasonsRes.success && seasonsRes.data) {
-        setSeasons(seasonsRes.data);
-        filterCache.seasons = seasonsRes.data;
+      if (seasonsRes.success) {
+        filterCache.seasons = toArray(seasonsRes.data);
+        setSeasons(filterCache.seasons);
       }
-      if (colorsRes.success && colorsRes.data) {
-        setColors(colorsRes.data);
-        filterCache.colors = colorsRes.data;
+      if (colorsRes.success) {
+        filterCache.colors = toArray(colorsRes.data);
+        setColors(filterCache.colors);
       }
-      if (sizesRes.success && sizesRes.data) {
-        setSizes(sizesRes.data);
-        filterCache.sizes = sizesRes.data;
+      if (sizesRes.success) {
+        filterCache.sizes = toArray(sizesRes.data);
+        setSizes(filterCache.sizes);
       }
       
       // Update cache timestamp
@@ -180,52 +167,15 @@ const useInventoryData = () => {
     }
   }, []);
 
-  const loadAllData = useCallback(async () => {
-    // Load products immediately
-    await loadProducts();
-    // Load filter options in background
-    loadFilterOptions();
-  }, [loadProducts, loadFilterOptions]);
-
+  /** Re-run the last query, e.g. after a product was created or deleted. */
   const refreshProducts = useCallback(async () => {
-    try {
-      // Use the same logic as loadProducts to get all items
-      const firstPageRes = await productsAPI.getProducts({ page: 1, size: 100 });
-      
-      if (!firstPageRes.success || !firstPageRes.data) {
-        throw new Error('Failed to fetch products');
-      }
-      
-      const pagination = firstPageRes.data.pagination;
-      const totalPages = pagination?.pages || 1;
-      const totalItems = pagination?.total || firstPageRes.data.items?.length || 0;
-      
-      let allItems = [...firstPageRes.data.items];
-      
-      // Fetch remaining pages if needed
-      if (totalPages > 1 && firstPageRes.data.items?.length < totalItems) {
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(productsAPI.getProducts({ page, size: 100 }));
-        }
-        
-        const pageResults = await Promise.all(pagePromises);
-        pageResults.forEach((pageRes) => {
-          if (pageRes.success && pageRes.data?.items) {
-            allItems.push(...pageRes.data.items);
-          }
-        });
-      }
-      
-      console.log('🔄 Refreshed products:', allItems.length, 'total');
-      setProducts(allItems);
-    } catch (err) {
-      console.error('Error refreshing products:', err);
-    }
-  }, []);
+    await loadProducts(lastQueryRef.current);
+  }, [loadProducts]);
 
   return {
     products,
+    pagination,
+    totalProducts,
     brands,
     categories,
     seasons,
@@ -235,7 +185,6 @@ const useInventoryData = () => {
     filtersLoading,
     loading: productsLoading, // Keep backward compatibility
     error,
-    loadAllData,
     loadProducts,
     loadFilterOptions,
     refreshProducts,
@@ -244,81 +193,61 @@ const useInventoryData = () => {
 };
 
 // Custom hook for filtering and pagination
-const useProductFilters = (products) => {
+const useProductFilters = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const filteredProducts = useMemo(() => {
-    console.log('🔍 Filtering products:', {
-      totalProducts: products?.length || 0,
-      searchTerm,
-      selectedBrand,
-      selectedSeason,
-      selectedCategory
-    });
-    
-    if (!Array.isArray(products)) {
-      console.log('❌ Products is not an array:', products);
-      return [];
-    }
-    
-    let filtered = products;
-    console.log('📊 Starting with', filtered.length, 'products');
+  // Typing must not fire one request per keystroke. The page reset is applied
+  // in the same update as the new term, so the two together cause a single
+  // re-render — and therefore a single request.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setCurrentPage(1);
+    }, SEARCH_CONFIG.DEBOUNCE_DELAY);
 
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const beforeSearch = filtered.length;
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchLower) ||
-        (product.brand_name && product.brand_name.toLowerCase().includes(searchLower))
-      );
-      console.log('🔎 After search filter:', filtered.length, 'products (was', beforeSearch, ')');
-    }
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
-    if (selectedBrand !== 'all') {
-      const beforeBrand = filtered.length;
-      filtered = filtered.filter(product => product.brand_id === parseInt(selectedBrand));
-      console.log('🏷️ After brand filter:', filtered.length, 'products (was', beforeBrand, ')');
-    }
+  // Changing a filter invalidates the current page number. Batching both state
+  // updates in one handler avoids a wasted request for "old page + new filter".
+  const changeBrand = useCallback((value) => {
+    setSelectedBrand(value);
+    setCurrentPage(1);
+  }, []);
 
-    if (selectedSeason !== 'all') {
-      const beforeSeason = filtered.length;
-      filtered = filtered.filter(product => product.season_id === parseInt(selectedSeason));
-      console.log('🌤️ After season filter:', filtered.length, 'products (was', beforeSeason, ')');
-    }
+  const changeSeason = useCallback((value) => {
+    setSelectedSeason(value);
+    setCurrentPage(1);
+  }, []);
 
-    if (selectedCategory !== 'all') {
-      const beforeCategory = filtered.length;
-      filtered = filtered.filter(product => product.category_id === parseInt(selectedCategory));
-      console.log('📂 After category filter:', filtered.length, 'products (was', beforeCategory, ')');
-    }
+  const changeCategory = useCallback((value) => {
+    setSelectedCategory(value);
+    setCurrentPage(1);
+  }, []);
 
-    console.log('✅ Final filtered products:', filtered.length);
-    return filtered;
-  }, [products, searchTerm, selectedBrand, selectedSeason, selectedCategory]);
+  /** Query parameters for GET /products/, rebuilt whenever a filter changes. */
+  const queryParams = useMemo(() => {
+    const params = { page: currentPage, size: pageSize };
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginated = filteredProducts.slice(startIndex, endIndex);
-    
-    console.log('📄 Pagination:', {
-      currentPage,
-      pageSize,
-      startIndex,
-      endIndex,
-      totalFiltered: filteredProducts.length,
-      paginatedCount: paginated.length
-    });
-    
-    return paginated;
-  }, [filteredProducts, currentPage, pageSize]);
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (selectedBrand !== 'all') params.brand_id = Number(selectedBrand);
+    if (selectedSeason !== 'all') params.season_id = Number(selectedSeason);
+    if (selectedCategory !== 'all') params.category_id = Number(selectedCategory);
 
-  const totalItems = useMemo(() => filteredProducts.length, [filteredProducts]);
+    return params;
+  }, [currentPage, pageSize, debouncedSearch, selectedBrand, selectedSeason, selectedCategory]);
+
+  const hasActiveFilters =
+    Boolean(debouncedSearch) ||
+    selectedBrand !== 'all' ||
+    selectedSeason !== 'all' ||
+    selectedCategory !== 'all';
 
   const resetFilters = useCallback(() => {
     setSearchTerm('');
@@ -341,16 +270,15 @@ const useProductFilters = (products) => {
     searchTerm,
     setSearchTerm,
     selectedBrand,
-    setSelectedBrand,
+    setSelectedBrand: changeBrand,
     selectedSeason,
-    setSelectedSeason,
+    setSelectedSeason: changeSeason,
     selectedCategory,
-    setSelectedCategory,
+    setSelectedCategory: changeCategory,
     currentPage,
     pageSize,
-    filteredProducts,
-    paginatedData,
-    totalItems,
+    queryParams,
+    hasActiveFilters,
     resetFilters,
     handlePageChange,
     handlePageSizeChange
@@ -471,6 +399,7 @@ const FiltersSkeleton = () => (
 export default function InventoryPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const confirm = useConfirm();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -478,6 +407,8 @@ export default function InventoryPage() {
 
   const {
     products,
+    pagination,
+    totalProducts,
     brands,
     categories,
     seasons,
@@ -487,10 +418,9 @@ export default function InventoryPage() {
     filtersLoading,
     loading,
     error,
-    loadAllData,
     loadProducts,
-    refreshProducts,
-    setProducts
+    loadFilterOptions,
+    refreshProducts
   } = useInventoryData();
 
   const {
@@ -504,27 +434,38 @@ export default function InventoryPage() {
     setSelectedCategory,
     currentPage,
     pageSize,
-    paginatedData,
-    totalItems,
+    queryParams,
+    hasActiveFilters,
     handlePageChange,
     handlePageSizeChange
-  } = useProductFilters(products);
+  } = useProductFilters();
+
+  const authorized = !authLoading && isAuthenticated();
 
   // Handle authentication
   useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated()) {
-        navigate('/login');
-        return;
-      }
-      loadAllData();
+    if (!authLoading && !isAuthenticated()) {
+      navigate('/login');
     }
-  }, [authLoading, isAuthenticated, navigate, loadAllData]);
+  }, [authLoading, isAuthenticated, navigate]);
 
-  // Reset to first page when filters change
+  // Filter options are static reference data — fetched once.
   useEffect(() => {
-    handlePageChange(1);
-  }, [searchTerm, selectedBrand, selectedSeason, selectedCategory, handlePageChange]);
+    if (authorized) loadFilterOptions();
+  }, [authorized, loadFilterOptions]);
+
+  // Every filter or page change turns into exactly one server query.
+  useEffect(() => {
+    if (authorized) loadProducts(queryParams);
+  }, [authorized, queryParams, loadProducts]);
+
+  // Deleting the last row of the last page leaves the current page past the
+  // end of the result set — step back so the table never renders empty.
+  useEffect(() => {
+    if (!productsLoading && pagination.pages > 0 && currentPage > pagination.pages) {
+      handlePageChange(pagination.pages);
+    }
+  }, [productsLoading, pagination.pages, currentPage, handlePageChange]);
 
   const handleAddProduct = useCallback(async (productData) => {
     try {
@@ -536,7 +477,7 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error adding product:', error);
-      alert('Mahsulot qo\'shishda xatolik yuz berdi');
+      toast.error('Mahsulot qo\'shishda xatolik yuz berdi');
     }
   }, []);
 
@@ -550,38 +491,45 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error creating variants:', error);
-      alert('Variantlarni yaratishda xatolik yuz berdi');
+      toast.error('Variantlarni yaratishda xatolik yuz berdi');
     }
   }, [refreshProducts]);
 
+  // Mutations reload the current page instead of patching the local array:
+  // with server-side paging the row set and the total both live on the server.
   const handleEditProduct = useCallback(async (productData) => {
     try {
       const response = await productsAPI.updateProduct(editingProduct.id, productData);
-      if (response.success && response.data) {
-        setProducts(prevProducts => 
-          prevProducts.map(p => p.id === editingProduct.id ? response.data : p)
-        );
+      if (response.success) {
         setEditingProduct(null);
+        await refreshProducts();
       }
     } catch (error) {
       console.error('Error updating product:', error);
-      alert('Mahsulotni yangilashda xatolik yuz berdi');
+      toast.error('Mahsulotni yangilashda xatolik yuz berdi');
     }
-  }, [editingProduct, setProducts]);
+  }, [editingProduct, refreshProducts]);
 
   const handleDeleteProduct = useCallback(async (productId) => {
-    if (!confirm('Bu mahsulotni o\'chirishni xohlaysizmi?')) return;
+    const confirmed = await confirm({
+      title: 'Mahsulotni o\'chirish',
+      message: 'Bu mahsulotni o\'chirishni xohlaysizmi?',
+      description: 'Mahsulot va uning barcha variantlari o\'chiriladi. Bu amalni qaytarib bo\'lmaydi.',
+      confirmText: 'Ha, o\'chirish',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     try {
       const response = await productsAPI.deleteProduct(productId);
       if (response.success) {
-        setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+        await refreshProducts();
       }
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Mahsulotni o\'chirishda xatolik yuz berdi');
+      toast.error('Mahsulotni o\'chirishda xatolik yuz berdi');
     }
-  }, [setProducts]);
+  }, [refreshProducts, confirm]);
 
   const handleViewProduct = useCallback((product) => {
     navigate(`/inventory/${product.id}`);
@@ -749,18 +697,26 @@ export default function InventoryPage() {
       key: 'actions',
       label: 'Amallar',
       width: '12%',
+      // Row clicks open the product, so action buttons must stop propagation —
+      // otherwise deleting a row also navigates away to that row's detail page.
       render: (_, product) => (
         <div className="flex items-center gap-1">
           <button
             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors hover:scale-105 transform"
-            onClick={() => handleViewProduct(product)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewProduct(product);
+            }}
             title="Ko'rish"
           >
             <Eye size={14} />
           </button>
           <button
             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors hover:scale-105 transform"
-            onClick={() => handleDeleteProduct(product.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteProduct(product.id);
+            }}
             title="O'chirish"
           >
             <Trash2 size={14} />
@@ -786,7 +742,7 @@ export default function InventoryPage() {
         <PageLayout>
           <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <p className="text-red-600 text-center">{error}</p>
-            <Button onClick={loadAllData}>Qayta urinish</Button>
+            <Button onClick={() => loadProducts(queryParams)}>Qayta urinish</Button>
           </div>
         </PageLayout>
       </Layout>
@@ -803,8 +759,8 @@ export default function InventoryPage() {
         <div className="space-y-4">
           {/* Header */}
           <InventoryHeader
-            totalProducts={productsLoading ? 0 : products.length}
-            filteredCount={productsLoading ? 0 : totalItems}
+            totalProducts={totalProducts}
+            filteredCount={hasActiveFilters ? pagination.total : totalProducts}
             onAddProduct={() => setShowAddModal(true)}
             loading={productsLoading}
           />
@@ -912,14 +868,14 @@ export default function InventoryPage() {
             <Card className="overflow-hidden">
               <Table
                 columns={columns}
-                data={paginatedData}
+                data={products}
                 className="rounded-lg"
                 onRowClick={handleViewProduct}
                 pagination={true}
                 pageSize={pageSize}
                 currentPage={currentPage}
                 onPageChange={handlePageChange}
-                totalItems={totalItems}
+                totalItems={pagination.total}
                 getRowClassName={getRowClassName}
                 highlightRows={true}
               />

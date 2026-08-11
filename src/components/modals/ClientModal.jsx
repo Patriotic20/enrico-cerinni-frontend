@@ -4,6 +4,7 @@ import Modal from './Modal';
 import Button from '../ui/Button';
 import Input from '../forms/Input';
 import { clientsAPI } from '../../api';
+import toast from 'react-hot-toast';
 
 const ClientModal = ({ 
   isOpen, 
@@ -107,7 +108,7 @@ const ClientModal = ({
   // Handle create new client
   const handleCreateClient = async () => {
     if (!newClient.first_name.trim() || !newClient.last_name.trim()) {
-      alert('Iltimos, mijoz ismi va familiyasini kiriting');
+      toast.error('Iltimos, mijoz ismi va familiyasini kiriting');
       return;
     }
 
@@ -122,7 +123,7 @@ const ClientModal = ({
       }
     } catch (error) {
       console.error('Error creating client:', error);
-      alert('Mijoz yaratishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
+      toast.error('Mijoz yaratishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
     } finally {
       setCreateLoading(false);
     }

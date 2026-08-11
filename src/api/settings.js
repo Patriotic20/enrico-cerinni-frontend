@@ -1,5 +1,3 @@
-import api from './client';
-import { validateApiResponse } from '../utils/api';
 import { createCrudApi } from './helpers';
 
 export const settingsAPI = {
@@ -57,45 +55,4 @@ export const settingsAPI = {
       deleteSeason: (id) => crud.remove(id),
     };
   })(),
-
-  // Attributes
-  getAttributes: async () => {
-    try {
-      const response = await api.get('/settings/attributes');
-      return validateApiResponse(response.data);
-    } catch (error) {
-      console.error('Get attributes API error:', error);
-      throw error;
-    }
-  },
-
-  createAttribute: async (attributeData) => {
-    try {
-      const response = await api.post('/settings/attributes', attributeData);
-      return validateApiResponse(response.data);
-    } catch (error) {
-      console.error('Create attribute API error:', error);
-      throw error;
-    }
-  },
-
-  updateAttribute: async (attributeId, attributeData) => {
-    try {
-      const response = await api.put(`/settings/attributes/${attributeId}`, attributeData);
-      return validateApiResponse(response.data);
-    } catch (error) {
-      console.error('Update attribute API error:', error);
-      throw error;
-    }
-  },
-
-  deleteAttribute: async (attributeId) => {
-    try {
-      const response = await api.delete(`/settings/attributes/${attributeId}`);
-      return validateApiResponse(response.data);
-    } catch (error) {
-      console.error('Delete attribute API error:', error);
-      throw error;
-    }
-  },
-}; 
+};

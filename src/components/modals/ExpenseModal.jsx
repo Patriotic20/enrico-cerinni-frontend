@@ -49,8 +49,8 @@ const ExpenseModal = ({ isOpen, onClose, expense = null, onSuccess }) => {
   useEffect(() => {
     if (expense) {
       setFormData({
-        description: expense.title || '',
-        notes: expense.description || '',
+        description: expense.description || '',
+        notes: expense.notes || '',
         amount: expense.amount || '',
         category: expense.category || '',
         date: expense.date ? new Date(expense.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

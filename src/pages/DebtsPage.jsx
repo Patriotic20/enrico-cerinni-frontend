@@ -8,6 +8,7 @@ import { DebtFilters, DebtTrendChart } from '../components/debts';
 import { LoadingSpinner, Card, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { clientsAPI, salesAPI } from '../api';
+import toast from 'react-hot-toast';
 
 export default function DebtsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -70,6 +71,9 @@ export default function DebtsPage() {
     try {
       const params = {
         has_debt: true,
+        // This page has no pager, so ask for the whole debtor list at once
+        // instead of silently showing only the first 10.
+        size: 100,
         ...filterParams,
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, value]) => value !== '')
@@ -111,8 +115,8 @@ export default function DebtsPage() {
       if (response.success && response.data) {
         setTrendData(response.data);
       } else {
-        console.warn('Debt trend API returned unsuccessful response, using mock data');
-        generateMockDebtData();
+        console.warn('Debt trend API returned unsuccessful response');
+        setTrendData([]);
       }
     } catch (error) {
       console.warn('Debt trend API not available or failed:', {
@@ -121,26 +125,12 @@ export default function DebtsPage() {
         statusText: error?.response?.statusText || 'No status text',
         url: error?.config?.url || 'No URL'
       });
-      generateMockDebtData();
+      setTrendData([]);
     } finally {
       setTrendLoading(false);
     }
   };
 
-  const generateMockDebtData = () => {
-    const mockData = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      mockData.push({
-        date: date.toISOString().split('T')[0],
-        total_debt: Math.random() * 10000000 + 5000000,
-        client_count: Math.floor(Math.random() * 50) + 20
-      });
-    }
-    setTrendData(mockData);
-  };
 
   const loadPaymentTrend = async () => {
     try {
@@ -148,9 +138,8 @@ export default function DebtsPage() {
       if (response.success && response.data) {
         setPaymentTrendData(response.data);
       } else {
-        // If API returns but with no success, use mock data
-        console.warn('Payment trend API returned unsuccessful response, using mock data');
-        generateMockPaymentData();
+        console.warn('Payment trend API returned unsuccessful response');
+        setPaymentTrendData([]);
       }
     } catch (error) {
       // Better error logging with more details
@@ -160,25 +149,10 @@ export default function DebtsPage() {
         statusText: error?.response?.statusText || 'No status text',
         url: error?.config?.url || 'No URL'
       });
-      // Use mock data when API fails
-      generateMockPaymentData();
+      setPaymentTrendData([]);
     }
   };
 
-  const generateMockPaymentData = () => {
-    const mockData = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      mockData.push({
-        date: date.toISOString().split('T')[0],
-        total_payments: Math.random() * 2000000 + 500000,
-        payment_count: Math.floor(Math.random() * 15) + 5
-      });
-    }
-    setPaymentTrendData(mockData);
-  };
 
   const handleViewClientDebts = async (client) => {
     try {
@@ -209,24 +183,18 @@ export default function DebtsPage() {
     setShowPaymentModal(true);
   };
 
-  const handleProcessPayment = async (clientId, paymentAmount) => {
-    try {
-      const response = await salesAPI.processDebtPayment(clientId, paymentAmount);
-      if (response.success) {
-        alert('To\'lov muvaffaqiyatli amalga oshirildi');
-        setShowPaymentModal(false);
-        setSelectedClient(null);
-        setClientDebts([]);
-        setClientTransactions([]);
-        loadClientsWithDebts();
-        loadDebtStats();
-        loadDebtTrend();
-        loadPaymentTrend();
-      }
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('To\'lovni amalga oshirishda xatolik yuz berdi');
-    }
+  // DebtPaymentModal already posted the payment — this only reacts to it.
+  // Calling the API again here charged the client twice for every payment.
+  const handlePaymentCompleted = (paymentAmount) => {
+    toast.success('To\'lov muvaffaqiyatli amalga oshirildi');
+    setShowPaymentModal(false);
+    setSelectedClient(null);
+    setClientDebts([]);
+    setClientTransactions([]);
+    loadClientsWithDebts();
+    loadDebtStats();
+    loadDebtTrend();
+    loadPaymentTrend();
   };
 
   const handleFilterChange = (key, value) => {
@@ -642,9 +610,7 @@ export default function DebtsPage() {
           onClose={() => setShowPaymentModal(false)}
           client={selectedClient}
           currentDebt={selectedClient?.debt_amount || 0}
-          onPaymentComplete={(paymentAmount, newDebtAmount) => {
-            handleProcessPayment(selectedClient.id, paymentAmount);
-          }}
+          onPaymentComplete={handlePaymentCompleted}
         />
       </PageLayout>
     </Layout>

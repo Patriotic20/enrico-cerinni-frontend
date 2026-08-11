@@ -17,8 +17,10 @@ export const API_CONFIG = {
 // Search and pagination
 export const SEARCH_CONFIG = {
   DEBOUNCE_DELAY: 300,
-  DEFAULT_LIMIT: 20, // Increased from 10 to 20 for better UX
-  MAX_LIMIT: 1000, // Increased from 100 to 1000 to support more products
+  DEFAULT_LIMIT: 20,
+  // Hard ceiling enforced by the API (`size` is validated as le=100); asking for
+  // more makes the request fail validation instead of returning extra rows.
+  MAX_LIMIT: 100,
 };
 
 // Payment methods
@@ -61,7 +63,6 @@ export const ROUTES = {
   SETTINGS: '/settings',
   DEBTS: '/debts',
   SETTINGS_CATEGORIES: '/settings/categories',
-  SETTINGS_ATTRIBUTES: '/settings/attributes',
   SETTINGS_BRANDS: '/settings/brands',
   SETTINGS_COLORS: '/settings/colors',
   SETTINGS_SIZES: '/settings/sizes',

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { salesAPI } from '../api';
+import { useConfirm } from '../contexts/ConfirmContext';
+import toast from 'react-hot-toast';
 
 export default function useSales() {
   const [sales, setSales] = useState([]);
@@ -32,6 +34,7 @@ export default function useSales() {
     total: 0,
     pages: 0
   });
+  const confirm = useConfirm();
 
   const loadSales = async () => {
     setLoading(true);
@@ -105,20 +108,28 @@ export default function useSales() {
   };
 
   const handleCancelSale = async (saleId) => {
-    if (!confirm('Bu sotuvni bekor qilishni xohlaysizmi?')) {
+    const confirmed = await confirm({
+      title: 'Sotuvni bekor qilish',
+      message: 'Bu sotuvni bekor qilishni xohlaysizmi?',
+      description: 'Sotuv bekor qilinadi va mahsulotlar omborga qaytariladi.',
+      confirmText: 'Ha, bekor qilish',
+      cancelText: 'Yo\'q',
+      variant: 'warning',
+    });
+    if (!confirmed) {
       return;
     }
 
     try {
       const response = await salesAPI.cancelSale(saleId);
       if (response.success) {
-        alert('Sotuv muvaffaqiyatli bekor qilindi');
+        toast.success('Sotuv muvaffaqiyatli bekor qilindi');
         loadSales();
         loadStats();
       }
     } catch (error) {
       console.error('Error cancelling sale:', error);
-      alert('Sotuvni bekor qilishda xatolik yuz berdi');
+      toast.error('Sotuvni bekor qilishda xatolik yuz berdi');
     }
   };
 
@@ -126,7 +137,7 @@ export default function useSales() {
     try {
       const response = await salesAPI.paySaleDebt(saleId, paymentAmount);
       if (response.success) {
-        alert('Qarzdorlik muvaffaqiyatli to\'landi');
+        toast.success('Qarzdorlik muvaffaqiyatli to\'landi');
         setShowDebtPaymentModal(false);
         setSelectedDebtSale(null);
         loadSales();
@@ -134,7 +145,7 @@ export default function useSales() {
       }
     } catch (error) {
       console.error('Error paying debt:', error);
-      alert('Qarzdorlik to\'lashda xatolik yuz berdi');
+      toast.error('Qarzdorlik to\'lashda xatolik yuz berdi');
     }
   };
 
@@ -196,7 +207,7 @@ export default function useSales() {
 
   const exportReport = () => {
     // TODO: Implement export functionality
-    alert('Hisobot eksport qilish funksiyasi tez orada qo\'shiladi');
+    toast('Hisobot eksport qilish funksiyasi tez orada qo\'shiladi');
   };
 
   const formatDate = (dateString) => {

@@ -5,6 +5,7 @@ import { Button } from '../ui';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import Input from '../forms/Input';
 import { cn } from '../../utils/cn';
+import toast from 'react-hot-toast';
 
 export default function SaleDebtPaymentModal({
   sale,
@@ -26,12 +27,12 @@ export default function SaleDebtPaymentModal({
     e.preventDefault();
     
     if (!paymentAmount || paymentAmount <= 0) {
-      alert('To\'lov miqdorini kiriting');
+      toast.error('To\'lov miqdorini kiriting');
       return;
     }
 
     if (Number(paymentAmount) > remainingDebt) {
-      alert('To\'lov miqdori qoldi qarzdorlikdan ko\'p bo\'lishi mumkin emas');
+      toast.error('To\'lov miqdori qoldi qarzdorlikdan ko\'p bo\'lishi mumkin emas');
       return;
     }
 

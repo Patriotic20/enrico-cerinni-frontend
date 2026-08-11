@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { clientsAPI } from '../api';
+import toast from 'react-hot-toast';
 
 // Optimized debounce hook with proper cleanup
 const useDebounce = (value, delay) => {
@@ -157,7 +158,7 @@ export const useClientManagement = (itemsPerPage = 10) => {
       loadClients();
     } catch (error) {
       console.error('Error deleting client:', error);
-      alert('Mijozni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
+      toast.error('Mijozni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
     } finally {
       setModalState(prev => ({ ...prev, deleting: false }));
     }
@@ -177,7 +178,7 @@ export const useClientManagement = (itemsPerPage = 10) => {
       loadClients();
     } catch (error) {
       console.error('Error deleting clients:', error);
-      alert('Mijozlarni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
+      toast.error('Mijozlarni o\'chirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
     } finally {
       setModalState(prev => ({ ...prev, deleting: false }));
     }

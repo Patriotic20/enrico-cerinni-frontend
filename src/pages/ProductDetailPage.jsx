@@ -8,6 +8,8 @@ import ProductForm from '../components/forms/ProductForm';
 import ProductVariants from '../components/inventory/ProductVariants';
 import VariantCreationModal from '../components/modals/VariantCreationModal';
 import { useProductDetail } from '../hooks';
+import { useConfirm } from '../contexts/ConfirmContext';
+import toast from 'react-hot-toast';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -15,7 +17,8 @@ export default function ProductDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+  const confirm = useConfirm();
+
   const { 
     product, 
     brands, 
@@ -37,12 +40,19 @@ export default function ProductDetailPage() {
     if (result.success) {
       setShowEditModal(false);
     } else {
-      alert(result.error || 'Mahsulot yangilanmadi');
+      toast.error(result.error || 'Mahsulot yangilanmadi');
     }
   };
 
   const handleDeleteProduct = async () => {
-    if (!confirm('Bu mahsulotni o\'chirishni xohlaysizmi?')) return;
+    const confirmed = await confirm({
+      title: 'Mahsulotni o\'chirish',
+      message: 'Bu mahsulotni o\'chirishni xohlaysizmi?',
+      description: 'Mahsulot va uning barcha variantlari o\'chiriladi. Bu amalni qaytarib bo\'lmaydi.',
+      confirmText: 'Ha, o\'chirish',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
 
     setIsDeleting(true);
     const result = await deleteProduct();
@@ -51,7 +61,7 @@ export default function ProductDetailPage() {
     if (result.success) {
       navigate('/inventory');
     } else {
-      alert(result.error || 'Mahsulot o\'chirilmadi');
+      toast.error(result.error || 'Mahsulot o\'chirilmadi');
     }
   };
 

@@ -206,9 +206,15 @@ const ReportContent = ({ reportType }) => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [dateRange, setDateRange] = useState({
-    start: '2024-01-01',
-    end: '2024-01-31'
+  // Default to the last 30 days. A hardcoded calendar range goes stale and
+  // every report silently comes back empty once the date has passed.
+  const [dateRange, setDateRange] = useState(() => {
+    const toISODate = (date) => date.toISOString().slice(0, 10);
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+
+    return { start: toISODate(start), end: toISODate(end) };
   });
 
   // Load report data when type changes
@@ -218,9 +224,8 @@ const ReportContent = ({ reportType }) => {
       setError(null);
       
       try {
-        // Use test API for now - you can switch to authenticated API later
         const { reportsAPI } = await import('../api');
-        
+
         const filters = {
           start_date: dateRange.start,
           end_date: dateRange.end
@@ -229,22 +234,22 @@ const ReportContent = ({ reportType }) => {
         let response;
         switch (reportType) {
           case 'sales':
-            response = await reportsAPI.testApi.getSalesReport(filters);
+            response = await reportsAPI.getSalesReport(filters);
             break;
           case 'finance':
-            response = await reportsAPI.testApi.getFinanceReport(filters);
+            response = await reportsAPI.getFinanceReport(filters);
             break;
           case 'inventory':
-            response = await reportsAPI.testApi.getInventoryReport();
+            response = await reportsAPI.getInventoryReport();
             break;
           case 'clients':
-            response = await reportsAPI.testApi.getClientsReport(filters);
+            response = await reportsAPI.getClientsReport(filters);
             break;
           case 'performance':
-            response = await reportsAPI.testApi.getPerformanceReport(filters);
+            response = await reportsAPI.getPerformanceReport(filters);
             break;
           default:
-            response = await reportsAPI.testApi.getSalesReport(filters);
+            response = await reportsAPI.getSalesReport(filters);
         }
 
         if (response.success) {

@@ -69,7 +69,8 @@ export const useAuth = () => {
     } catch (error) {
       console.error('Login error:', error);
       setUser(null);
-      const errorMessage = error.response?.data?.message || error.message || 'Network error occurred';
+      // handleApiError already resolves the server message into error.message.
+      const errorMessage = error?.message || 'Network error occurred';
       setError(errorMessage);
       return { 
         success: false, 
@@ -94,15 +95,11 @@ export const useAuth = () => {
     }
   };
 
-  const isAuthenticated = () => {
-    // Don't consider user authenticated while loading
-    if (loading) {
-      return false;
-    }
-    
-    // User is authenticated if we have user data and no errors
-    return !!user && !error;
-  };
+  // Single source of truth for "is this session authenticated".
+  // `error` is deliberately not part of it: a transient network failure while
+  // already signed in must not log the user out. ProtectedRoute in App.jsx
+  // gates on the same `loading`/`user` pair.
+  const isAuthenticated = () => !loading && !!user;
 
   const refreshAuth = async () => {
     await checkAuthStatus();

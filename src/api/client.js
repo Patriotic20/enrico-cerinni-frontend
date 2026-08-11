@@ -2,8 +2,21 @@ import axios from 'axios';
 import { handleApiError } from '../utils/api';
 import logger from '../utils/logger';
 
+/**
+ * Resolve the API base URL.
+ *
+ * An explicit VITE_API_URL always wins. Without it, development goes through
+ * the Vite dev proxy (/api) so local work never talks to the production API by
+ * accident; production builds fall back to the public API host.
+ */
+const resolveBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV) return '/api';
+  return 'https://api.enrico.uz';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.enrico.uz',
+  baseURL: resolveBaseURL(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

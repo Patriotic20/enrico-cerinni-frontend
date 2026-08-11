@@ -167,6 +167,30 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirmPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-confirm-fade {
+  animation: confirmFadeIn 0.15s ease-out;
+}
+
+.animate-confirm-pop {
+  animation: confirmPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* Base styles */
 * {
   box-sizing: border-box;

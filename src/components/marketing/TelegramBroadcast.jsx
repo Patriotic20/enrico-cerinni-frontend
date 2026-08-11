@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Bot, Send, Image, Users, UserCheck, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { Button, Card } from '../ui';
+import toast from 'react-hot-toast';
 
 const TelegramBroadcast = ({
   loading,
@@ -56,7 +57,7 @@ const TelegramBroadcast = ({
     const file = e.target.files[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        alert('Rasm hajmi 10MB dan katta bo\'lishi mumkin emas');
+        toast.error('Rasm hajmi 10MB dan katta bo\'lishi mumkin emas');
         return;
       }
       setTelegramForm(prev => ({

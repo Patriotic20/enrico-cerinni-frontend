@@ -1,11 +1,13 @@
 [build]
-builder = "nixpacks"
-buildCommand = "npm install && npm run build"
+builder = "NIXPACKS"
+# --include=dev is required: if NODE_ENV=production is set in the service
+# variables, npm would otherwise skip devDependencies, and vite lives there.
+buildCommand = "npm ci --include=dev && npm run build"
 
 [deploy]
-startCommand = "serve -s dist"
-restartPolicyType = "on_failure"
+startCommand = "npm run start"
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
-[env]
-NODE_ENV = "production"
+# Service variables (set them in Railway → Variables, not here):
+#   VITE_API_URL — inlined by Vite during the build, so a change needs a redeploy.

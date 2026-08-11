@@ -27,7 +27,6 @@ const Header = ({ onMenuClick, className, ...props }) => {
     // Dynamic route handling
     const routeMap = {
       '/settings/categories': 'Kategoriyalarni boshqarish',
-      '/settings/attributes': 'Xususiyatlarni boshqarish',
       '/settings/brands': 'Brendlarni boshqarish',
       '/settings/colors': 'Ranglarni boshqarish',
       '/settings/sizes': 'O\'lchamlarni boshqarish',

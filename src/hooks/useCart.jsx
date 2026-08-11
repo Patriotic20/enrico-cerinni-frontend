@@ -3,27 +3,34 @@ import { useState, useCallback } from 'react';
 export const useCart = () => {
   const [cart, setCart] = useState([]);
 
-  const addToCart = useCallback((product) => {
-    console.log('Adding product to cart:', product);
-    
-    const existingItem = cart.find(item => item.id === product.id);
-    
+  // Merge one product into a cart snapshot: bump the quantity if it is already
+  // there, otherwise append it with a numeric price.
+  const mergeItem = (items, product) => {
+    const existingItem = items.find(item => item.id === product.id);
+
     if (existingItem) {
-      setCart(cart.map(item =>
+      return items.map(item =>
         item.id === product.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
-      ));
-    } else {
-      // Ensure price is a number when adding to cart
-      const productWithNumberPrice = {
-        ...product,
-        price: parseFloat(product.price) || 0,
-        quantity: 1
-      };
-      setCart([...cart, productWithNumberPrice]);
+      );
     }
-  }, [cart]);
+
+    return [...items, { ...product, price: parseFloat(product.price) || 0, quantity: 1 }];
+  };
+
+  // Functional updates are required here: adding several products in one go
+  // queues several setCart calls, and a snapshot captured from the closure
+  // would be stale for every call after the first — only the last would land.
+  const addToCart = useCallback((product) => {
+    if (!product) return;
+    setCart(items => mergeItem(items, product));
+  }, []);
+
+  const addManyToCart = useCallback((products) => {
+    if (!Array.isArray(products) || products.length === 0) return;
+    setCart(items => products.reduce(mergeItem, items));
+  }, []);
 
   const updateQuantity = useCallback((productId, newQuantity) => {
     if (newQuantity <= 0) {
@@ -66,6 +73,7 @@ export const useCart = () => {
     subtotal,
     total,
     addToCart,
+    addManyToCart,
     updateQuantity,
     updatePrice,
     removeFromCart,

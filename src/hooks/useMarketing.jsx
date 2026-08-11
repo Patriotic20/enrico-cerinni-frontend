@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { marketingAPI } from '../api/marketing';
+import { toArray } from '../utils/api';
 import { useApp } from '../contexts/AppContext';
 
 export const useMarketing = () => {
@@ -48,7 +49,7 @@ export const useMarketing = () => {
       setLoading(true);
       const response = await marketingAPI.getBroadcastHistory();
       if (response.success) {
-        setBroadcastHistory(response.data);
+        setBroadcastHistory(toArray(response.data));
       }
     } catch (error) {
       console.error('Error loading broadcast history:', error);
@@ -64,7 +65,7 @@ export const useMarketing = () => {
       setLoading(true);
       const response = await marketingAPI.getMarketingClients();
       if (response.success) {
-        setClients(response.data);
+        setClients(toArray(response.data));
       }
     } catch (error) {
       console.error('Error loading marketing clients:', error);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import Button from '../ui/Button';
 import { validateProductVariantBulkCreate } from '../../utils/validation';
+import toast from 'react-hot-toast';
 
 const ProductVariantForm = ({ 
   product, 
@@ -31,17 +32,17 @@ const ProductVariantForm = ({
 
   const generateVariants = () => {
     if (selectedColors.length === 0 || selectedSizes.length === 0) {
-      alert('Rang va o\'lcham tanlang');
+      toast.error('Rang va o\'lcham tanlang');
       return;
     }
 
     if (!basePrice || basePrice <= 0) {
-      alert('To\'g\'ri narx kiriting');
+      toast.error('To\'g\'ri narx kiriting');
       return;
     }
 
     if (!baseStockQuantity || baseStockQuantity < 0) {
-      alert('To\'g\'ri zapas miqdori kiriting');
+      toast.error('To\'g\'ri zapas miqdori kiriting');
       return;
     }
 
@@ -79,7 +80,7 @@ const ProductVariantForm = ({
     e.preventDefault();
     
     if (variants.length === 0) {
-      alert('Variantlar yaratilmagan');
+      toast.error('Variantlar yaratilmagan');
       return;
     }
 
@@ -93,7 +94,7 @@ const ProductVariantForm = ({
     const errors = validateProductVariantBulkCreate(bulkData);
     if (errors.length > 0) {
       setValidationErrors(errors);
-      alert('Ma\'lumotlarda xatoliklar mavjud:\n' + errors.join('\n'));
+      toast.error('Ma\'lumotlarda xatoliklar mavjud:\n' + errors.join('\n'));
       return;
     }
 

@@ -44,22 +44,24 @@ export const useFinance = () => {
       const statsResponse = await financeAPI.getExpenseStats();
       if (statsResponse.success) {
         const totalExpenses = parseFloat(statsResponse.data.total_expenses) || 0;
+        // Category keys mirror EXPENSE_CATEGORIES on the backend.
         const byCategory = statsResponse.data.by_category || {};
-        
+
         const newStats = {
           totalExpenses: totalExpenses,
-          monthlyExpenses: totalExpenses,
-          supplierCosts: parseFloat(byCategory.supplier || byCategory.Supplier || 0),
-          dailyExpenses: totalExpenses / 30,
-          salaryExpenses: parseFloat(byCategory.salary || byCategory.Salary || 0)
+          monthlyExpenses: parseFloat(statsResponse.data.monthly_expenses) || 0,
+          supplierCosts: parseFloat(byCategory.supplier_costs || 0),
+          dailyExpenses: parseFloat(byCategory.daily_expenses || 0),
+          salaryExpenses: parseFloat(byCategory.salary || 0)
         };
-        
+
         setStats(newStats);
         financeCache.stats = newStats;
         financeCache.timestamp = Date.now();
       }
     } catch (error) {
       console.error('Error loading expense stats:', error);
+      setError('Xarajat statistikasini yuklashda xatolik yuz berdi');
     }
   }, []);
 
@@ -111,7 +113,15 @@ export const useFinance = () => {
       if (salaryPaymentsResponse.success) {
         setSalaryPayments(salaryPaymentsResponse.data.items || []);
       }
-      
+
+      // A failed request used to leave the tab silently empty, which reads as
+      // "no data yet" instead of "the request broke".
+      const failed = [expensesResponse, suppliersResponse, employeesResponse, salaryPaymentsResponse]
+        .some(response => !response.success);
+      if (failed) {
+        setError('Ba\'zi moliyaviy ma\'lumotlarni yuklab bo\'lmadi');
+      }
+
       // Update cache timestamp
       financeCache.timestamp = Date.now();
     } catch (error) {

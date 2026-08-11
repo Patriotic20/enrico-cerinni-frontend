@@ -3,6 +3,7 @@ import { X, Plus, Palette, Hash } from 'lucide-react';
 import Modal from './Modal';
 import Button from '../ui/Button';
 import { colorsAPI, sizesAPI, productVariantsAPI } from '../../api';
+import toast from 'react-hot-toast';
 
 export default function VariantCreationModal({
   isOpen,
@@ -71,17 +72,17 @@ export default function VariantCreationModal({
     e.preventDefault();
     
     if (selectedColors.length === 0 || selectedSizes.length === 0) {
-      alert('Rang va o\'lcham tanlang');
+      toast.error('Rang va o\'lcham tanlang');
       return;
     }
 
     if (!basePrice || basePrice <= 0) {
-      alert('To\'g\'ri narx kiriting');
+      toast.error('To\'g\'ri narx kiriting');
       return;
     }
 
     if (!baseStockQuantity || baseStockQuantity < 0) {
-      alert('To\'g\'ri zapas miqdori kiriting');
+      toast.error('To\'g\'ri zapas miqdori kiriting');
       return;
     }
 
@@ -114,11 +115,11 @@ export default function VariantCreationModal({
         setSelectedColors([]);
         setSelectedSizes([]);
       } else {
-        alert('Variantlar yaratilmadi');
+        toast.error('Variantlar yaratilmadi');
       }
     } catch (error) {
       console.error('Error creating variants:', error);
-      alert('Variantlar yaratilmadi');
+      toast.error('Variantlar yaratilmadi');
     } finally {
       setLoading(false);
     }

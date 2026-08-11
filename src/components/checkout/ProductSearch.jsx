@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import Input from '../forms/Input';
 import VariantSelectionModal from './VariantSelectionModal';
 import clsx from 'clsx';
+import toast from 'react-hot-toast';
 
 export default function ProductSearch({
   searchTerm,
@@ -166,13 +167,14 @@ export default function ProductSearch({
         // Pass the scanned SKU so modal can pre-select the correct variant
         handleAddToCart(scannedProduct, code);
       } else {
-        console.log('Barcode scan returned null/undefined for:', code);
-        setSearchTerm('');
+        // Keep the typed code: the exact-SKU lookup missed it, but the regular
+        // search may still match, so the dropdown stays useful. Clearing here
+        // used to wipe the input with no explanation.
+        toast.error(`"${code}" SKU bo'yicha mahsulot topilmadi`);
       }
     } catch (error) {
       console.error('Barcode scan error:', error);
-      // Clear everything on barcode scan failure
-      setSearchTerm('');
+      toast.error(error?.message || `"${code}" SKU bo'yicha mahsulot topilmadi`);
       setSelectedProduct(null);
       setScannedVariantSku(null);
       setShowVariantModal(false);

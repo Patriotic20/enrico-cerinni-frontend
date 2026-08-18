@@ -12,6 +12,7 @@ export const useMarketing = () => {
   const [broadcastHistory, setBroadcastHistory] = useState([]);
   const [clients, setClients] = useState([]);
   const [telegramStatus, setTelegramStatus] = useState(null);
+  const [smsStatus, setSmsStatus] = useState(null);
   
   // Form states
   const [smsForm, setSmsForm] = useState({
@@ -96,15 +97,50 @@ export const useMarketing = () => {
     }
   }, [showError, showSuccess]);
 
+  // Test SMS provider (Eskiz) connection
+  const testSmsConnection = useCallback(async () => {
+    try {
+      const response = await marketingAPI.testSmsConnection();
+      if (response.success) {
+        setSmsStatus(response.data);
+      } else {
+        setSmsStatus({ connected: false, error: response.message });
+      }
+    } catch (error) {
+      console.error('Error testing SMS connection:', error);
+      setSmsStatus({ connected: false, error: error.message });
+    }
+  }, []);
+
+  // The API answers success even when the provider rejected messages, so
+  // inspect per-channel counters to give the user an honest result.
+  const summarizeBroadcast = useCallback((data, channel) => {
+    const result = (data?.results || []).find(r => r.channel === channel);
+    if (!result) return { ok: true, text: '' };
+    if (result.failed > 0) {
+      const reason = result.errors?.[0] ? ` Sabab: ${result.errors[0]}` : '';
+      return {
+        ok: result.sent > 0,
+        text: `Yuborildi: ${result.sent} ta, xatolik: ${result.failed} ta.${reason}`,
+      };
+    }
+    return { ok: true, text: `Yuborildi: ${result.sent} ta` };
+  }, []);
+
   // Send SMS broadcast
   const sendSMSBroadcast = useCallback(async (data) => {
     try {
       setLoading(true);
       const response = await marketingAPI.sendSMSBroadcast(data);
       if (response.success) {
-        showSuccess('SMS xabar muvaffaqiyatli yuborildi');
+        const summary = summarizeBroadcast(response.data, 'sms');
+        if (summary.ok && !summary.text.includes('xatolik')) {
+          showSuccess(`SMS xabar muvaffaqiyatli yuborildi. ${summary.text}`);
+        } else {
+          showError(`SMS to'liq yuborilmadi. ${summary.text}`);
+        }
         await loadBroadcastHistory(); // Refresh history
-        return true;
+        return summary.ok;
       } else {
         showError(response.message || 'SMS yuborishda xatolik');
         return false;
@@ -116,7 +152,7 @@ export const useMarketing = () => {
     } finally {
       setLoading(false);
     }
-  }, [showError, showSuccess, loadBroadcastHistory]);
+  }, [showError, showSuccess, loadBroadcastHistory, summarizeBroadcast]);
 
   // Send Telegram broadcast
   const sendTelegramBroadcast = useCallback(async (data) => {
@@ -124,9 +160,14 @@ export const useMarketing = () => {
       setLoading(true);
       const response = await marketingAPI.sendTelegramBroadcast(data);
       if (response.success) {
-        showSuccess('Telegram xabar muvaffaqiyatli yuborildi');
+        const summary = summarizeBroadcast(response.data, 'telegram');
+        if (summary.ok && !summary.text.includes('xatolik')) {
+          showSuccess(`Telegram xabar muvaffaqiyatli yuborildi. ${summary.text}`);
+        } else {
+          showError(`Telegram to'liq yuborilmadi. ${summary.text}`);
+        }
         await loadBroadcastHistory(); // Refresh history
-        return true;
+        return summary.ok;
       } else {
         showError(response.message || 'Telegram xabar yuborishda xatolik');
         return false;
@@ -138,7 +179,7 @@ export const useMarketing = () => {
     } finally {
       setLoading(false);
     }
-  }, [showError, showSuccess, loadBroadcastHistory]);
+  }, [showError, showSuccess, loadBroadcastHistory, summarizeBroadcast]);
 
   // Validate SMS form
   const validateSmsForm = () => {
@@ -222,7 +263,8 @@ export const useMarketing = () => {
     loadBroadcastHistory();
     loadClients();
     testTelegramConnection();
-  }, [loadStats, loadBroadcastHistory, loadClients, testTelegramConnection]);
+    testSmsConnection();
+  }, [loadStats, loadBroadcastHistory, loadClients, testTelegramConnection, testSmsConnection]);
 
   return {
     // State
@@ -231,15 +273,17 @@ export const useMarketing = () => {
     broadcastHistory,
     clients,
     telegramStatus,
+    smsStatus,
     smsForm,
     telegramForm,
-    
+
     // Actions
     setSmsForm,
     setTelegramForm,
     handleSMSBroadcast,
     handleTelegramBroadcast,
     testTelegramConnection,
+    testSmsConnection,
     loadStats,
     loadBroadcastHistory,
     loadClients,

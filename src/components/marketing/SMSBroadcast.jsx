@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Smartphone, Send, Users, UserCheck, AlertCircle, MessageSquare } from 'lucide-react';
+import { Smartphone, Send, Users, UserCheck, AlertCircle, MessageSquare, CheckCircle, XCircle, Search } from 'lucide-react';
 import { Button, Card } from '../ui';
 
 // Predefined SMS templates
@@ -92,12 +92,14 @@ const SMSBroadcast = ({
   smsForm,
   setSmsForm,
   handleSMSBroadcast,
-  telegramStatus,
+  smsStatus,
+  testSmsConnection,
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [customMessage, setCustomMessage] = useState('');
   const [templateVariables, setTemplateVariables] = useState({});
+  const [clientSearch, setClientSearch] = useState('');
 
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template);
@@ -183,13 +185,58 @@ const SMSBroadcast = ({
   const selectedClientsCount = smsForm.selectedClients.length;
   const totalClients = clients.length;
 
+  // Filter the client list by name or phone
+  const normalizedSearch = clientSearch.trim().toLowerCase();
+  const filteredClients = normalizedSearch
+    ? clients.filter(client =>
+        `${client.first_name} ${client.last_name}`.toLowerCase().includes(normalizedSearch) ||
+        (client.phone || '').replace(/[\s-]/g, '').includes(normalizedSearch.replace(/[\s-]/g, ''))
+      )
+    : clients;
+
   // Filter templates by category
   const filteredTemplates = selectedCategory === 'all' 
     ? SMS_TEMPLATES 
     : SMS_TEMPLATES.filter(template => template.category === selectedCategory);
 
+  const smsConnected = Boolean(smsStatus?.connected);
+
   return (
     <div className="space-y-4">
+      {/* SMS Provider Connection Status */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+            smsConnected
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {smsConnected ? <CheckCircle size={16} /> : <XCircle size={16} />}
+            <span className="text-sm font-medium">
+              {smsStatus == null
+                ? 'Ulanish tekshirilmoqda...'
+                : smsConnected
+                  ? `SMS provayder (Eskiz) ulangan${smsStatus.balance != null ? ` — limit: ${smsStatus.balance} SMS` : ''}`
+                  : 'SMS provayder ulanmagan'}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={testSmsConnection}
+            disabled={loading}
+          >
+            Ulanishni tekshirish
+          </Button>
+        </div>
+        {!smsConnected && smsStatus?.error && (
+          <div className="mt-2 flex items-start gap-2 text-xs text-red-600">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>{smsStatus.error}</span>
+          </div>
+        )}
+      </Card>
+
       {/* Template Selection */}
       <Card className="p-4">
         <div className="space-y-4">
@@ -350,8 +397,22 @@ const SMSBroadcast = ({
                 </div>
               </div>
 
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Mijozni ismi yoki telefon raqami bo'yicha qidirish..."
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
               <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-2">
-                {clients.map(client => (
+                {filteredClients.length === 0 && (
+                  <p className="p-3 text-sm text-gray-500 text-center">Hech narsa topilmadi</p>
+                )}
+                {filteredClients.map(client => (
                   <label key={client.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-200">
                     <input
                       type="checkbox"
@@ -390,7 +451,7 @@ const SMSBroadcast = ({
           </div>
           <Button
             onClick={handleSMSBroadcast}
-            disabled={loading || (!smsForm.sendToAll && selectedClientsCount === 0) || !smsForm.message.trim() || !selectedTemplate}
+            disabled={loading || (!smsForm.sendToAll && selectedClientsCount === 0) || !smsForm.message.trim()}
             loading={loading}
             className="flex items-center gap-2"
           >
@@ -398,6 +459,16 @@ const SMSBroadcast = ({
             <span>SMS Yuborish</span>
           </Button>
         </div>
+        {(!smsForm.message.trim() || (!smsForm.sendToAll && selectedClientsCount === 0)) && (
+          <div className="mt-3 flex items-start gap-2 text-xs text-amber-600">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span>
+              {!smsForm.message.trim()
+                ? "Xabar matni tanlanmagan — yuqoridan shablonni tanlang yoki \"Boshqa xabar\" orqali o'z matningizni yozing"
+                : 'Kamida bitta mijozni tanlang yoki "Barcha mijozlarga yuborish" ni belgilang'}
+            </span>
+          </div>
+        )}
       </Card>
     </div>
   );

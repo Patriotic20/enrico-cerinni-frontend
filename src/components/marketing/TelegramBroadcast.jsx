@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Bot, Send, Image, Users, UserCheck, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Bot, Send, Image, Users, UserCheck, AlertCircle, CheckCircle, XCircle, Search } from 'lucide-react';
 import { Button, Card } from '../ui';
 import toast from 'react-hot-toast';
 
@@ -13,6 +13,7 @@ const TelegramBroadcast = ({
   testTelegramConnection,
 }) => {
   const fileInputRef = useRef(null);
+  const [clientSearch, setClientSearch] = useState('');
 
   const handleMessageChange = (e) => {
     setTelegramForm(prev => ({
@@ -79,6 +80,15 @@ const TelegramBroadcast = ({
 
   const selectedClientsCount = telegramForm.selectedClients.length;
   const totalClients = clients.length;
+
+  // Filter the client list by name or phone
+  const normalizedSearch = clientSearch.trim().toLowerCase();
+  const filteredClients = normalizedSearch
+    ? clients.filter(client =>
+        `${client.first_name} ${client.last_name}`.toLowerCase().includes(normalizedSearch) ||
+        (client.phone || '').replace(/[\s-]/g, '').includes(normalizedSearch.replace(/[\s-]/g, ''))
+      )
+    : clients;
 
   const getConnectionStatus = () => {
     if (!telegramStatus) return { connected: false, message: 'Ulanish tekshirilmoqda...' };
@@ -207,8 +217,22 @@ const TelegramBroadcast = ({
                 </div>
               </div>
 
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  placeholder="Mijozni ismi yoki telefon raqami bo'yicha qidirish..."
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
               <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-2">
-                {clients.map(client => (
+                {filteredClients.length === 0 && (
+                  <p className="p-3 text-sm text-gray-500 text-center">Hech narsa topilmadi</p>
+                )}
+                {filteredClients.map(client => (
                   <label key={client.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-200">
                     <input
                       type="checkbox"

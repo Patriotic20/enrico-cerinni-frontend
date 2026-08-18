@@ -46,6 +46,17 @@ export const marketingAPI = {
     }
   },
 
+  // Test SMS provider (Eskiz) connection
+  testSmsConnection: async () => {
+    try {
+      const response = await api.get('/marketing/sms/test');
+      return validateApiResponse(response.data);
+    } catch (error) {
+      console.error('Error testing SMS connection:', error);
+      throw error;
+    }
+  },
+
   // Test Telegram bot connection
   testTelegramConnection: async () => {
     try {

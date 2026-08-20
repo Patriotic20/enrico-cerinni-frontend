@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, compactAmount } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function ProfitChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
@@ -99,7 +99,7 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
               <YAxis 
                 tick={{ fontSize: 12, fill: '#6b7280' }}
                 axisLine={{ stroke: '#e5e7eb' }}
-                tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                tickFormatter={compactAmount}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar 

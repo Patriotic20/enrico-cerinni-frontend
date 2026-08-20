@@ -20,40 +20,50 @@ export function useDashboard() {
     salesPerformance: [],
     expenseBreakdown: [],
   });
-  const [selectedPeriod, setSelectedPeriod] = useState('1month');
-  const [chartLoading, setChartLoading] = useState(false);
+  // Each chart carries its own period. They used to share one value, so
+  // changing the range on any chart silently moved the other three.
+  const DEFAULT_PERIOD = '1month';
+  const [selectedPeriods, setSelectedPeriods] = useState({
+    cashflow: DEFAULT_PERIOD,
+    profit: DEFAULT_PERIOD,
+    salesPerformance: DEFAULT_PERIOD,
+    expenseBreakdown: DEFAULT_PERIOD,
+  });
+  const [chartLoading, setChartLoading] = useState({
+    cashflow: false,
+    profit: false,
+    salesPerformance: false,
+    expenseBreakdown: false,
+  });
   const { loading, error, callApi } = useApi();
 
-  const loadChartData = async (period = selectedPeriod) => {
-    try {
-      setChartLoading(true);
-      
-      // Load chart data in parallel for better performance
-      const [cashflowResponse, profitResponse, salesResponse, expenseResponse] = await Promise.allSettled([
-        callApi(() => dashboardAPI.getCashflowData(period)),
-        callApi(() => dashboardAPI.getProfitData(period)),
-        callApi(() => dashboardAPI.getSalesPerformanceData(period)),
-        callApi(() => dashboardAPI.getExpenseBreakdownData(period)),
-      ]);
+  const CHART_FETCHERS = {
+    cashflow: (period) => dashboardAPI.getCashflowData(period),
+    profit: (period) => dashboardAPI.getProfitData(period),
+    salesPerformance: (period) => dashboardAPI.getSalesPerformanceData(period),
+    expenseBreakdown: (period) => dashboardAPI.getExpenseBreakdownData(period),
+  };
 
-      // Update chart data with API responses or keep default values
-      const newChartData = {
-        cashflow: cashflowResponse.status === 'fulfilled' && cashflowResponse.value.success 
-          ? cashflowResponse.value.data : [],
-        profit: profitResponse.status === 'fulfilled' && profitResponse.value.success 
-          ? profitResponse.value.data : [],
-        salesPerformance: salesResponse.status === 'fulfilled' && salesResponse.value.success 
-          ? salesResponse.value.data : [],
-        expenseBreakdown: expenseResponse.status === 'fulfilled' && expenseResponse.value.success 
-          ? expenseResponse.value.data : [],
-      };
-      
-      setChartData(newChartData);
-    } catch (error) {
-      console.error('Error loading chart data:', error);
+  const loadChart = async (key, period) => {
+    setChartLoading(prev => ({ ...prev, [key]: true }));
+    try {
+      const response = await callApi(() => CHART_FETCHERS[key](period));
+      setChartData(prev => ({
+        ...prev,
+        [key]: response?.success ? (response.data || []) : [],
+      }));
+    } catch (err) {
+      console.error(`Error loading ${key} chart:`, err);
+      setChartData(prev => ({ ...prev, [key]: [] }));
     } finally {
-      setChartLoading(false);
+      setChartLoading(prev => ({ ...prev, [key]: false }));
     }
+  };
+
+  const loadChartData = async (periods = selectedPeriods) => {
+    await Promise.allSettled(
+      Object.keys(CHART_FETCHERS).map(key => loadChart(key, periods[key]))
+    );
   };
 
   const loadDashboardData = async () => {
@@ -93,9 +103,10 @@ export function useDashboard() {
     }
   };
 
-  const handlePeriodChange = async (newPeriod) => {
-    setSelectedPeriod(newPeriod);
-    await loadChartData(newPeriod);
+  // Only the chart the user touched is refetched.
+  const handlePeriodChange = async (chartKey, newPeriod) => {
+    setSelectedPeriods(prev => ({ ...prev, [chartKey]: newPeriod }));
+    await loadChart(chartKey, newPeriod);
   };
 
   useEffect(() => {
@@ -106,7 +117,7 @@ export function useDashboard() {
     stats,
     recentTransactions,
     chartData,
-    selectedPeriod,
+    selectedPeriods,
     loading,
     chartLoading,
     error,

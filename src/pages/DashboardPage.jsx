@@ -49,7 +49,7 @@ const DashboardPageContent = () => {
     stats, 
     recentTransactions, 
     chartData, 
-    selectedPeriod, 
+    selectedPeriods, 
     loading, 
     chartLoading, 
     error, 
@@ -70,7 +70,7 @@ const DashboardPageContent = () => {
       stats={stats} 
       recentTransactions={recentTransactions}
       chartData={chartData}
-      selectedPeriod={selectedPeriod}
+      selectedPeriods={selectedPeriods}
       chartLoading={chartLoading}
       onPeriodChange={handlePeriodChange}
     />

@@ -25,7 +25,7 @@ import {
 } from 'recharts';
 import { Card, Button } from '../ui';
 import { cn } from '../../utils/cn';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, compactAmount } from '../../utils/format';
 import { dashboardAPI } from '../../api';
 
 // Transaction amounts are always stored positive; the type says which way the
@@ -296,7 +296,7 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                   <YAxis
                     tick={{ fontSize: 12, fill: '#6b7280' }}
                     width={60}
-                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                    tickFormatter={compactAmount}
                   />
                   <Tooltip
                     formatter={(value, name) => [formatCurrency(value), name]}

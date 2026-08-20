@@ -35,3 +35,17 @@ export const formatPercentage = (value, total) => {
   const percentage = (value / total) * 100;
   return `${percentage.toFixed(1)}%`;
 }; 
+/**
+ * Short axis label for a money value.
+ *
+ * A fixed "/ 1000000 + M" scale prints every tick as "0.0M" once the numbers
+ * are small — which is exactly what a young shop's dashboard looks like — so
+ * the unit follows the magnitude instead.
+ */
+export const compactAmount = (value) => {
+  const num = Number(value) || 0;
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(num / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}K`;
+  return `${Math.round(num)}`;
+};

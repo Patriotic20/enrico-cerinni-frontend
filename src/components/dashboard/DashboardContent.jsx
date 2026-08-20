@@ -6,7 +6,7 @@ import ProfitChart from './ProfitChart';
 import SalesPerformanceChart from './SalesPerformanceChart';
 import ExpenseBreakdownChart from './ExpenseBreakdownChart';
 
-export default function DashboardContent({ stats, recentTransactions, chartData = {}, selectedPeriod, chartLoading, onPeriodChange }) {
+export default function DashboardContent({ stats, recentTransactions, chartData = {}, selectedPeriods = {}, chartLoading = {}, onPeriodChange }) {
   return (
     <div className="space-y-6">
       {/* Enhanced Statistics */}
@@ -15,31 +15,31 @@ export default function DashboardContent({ stats, recentTransactions, chartData 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <CashflowChart 
-          data={chartData.cashflow} 
-          selectedPeriod={selectedPeriod}
-          loading={chartLoading}
-          onPeriodChange={onPeriodChange}
+          data={chartData.cashflow}
+          selectedPeriod={selectedPeriods.cashflow}
+          loading={chartLoading.cashflow}
+          onPeriodChange={(period) => onPeriodChange('cashflow', period)}
         />
         <ProfitChart 
           data={chartData.profit}
-          selectedPeriod={selectedPeriod}
-          loading={chartLoading}
-          onPeriodChange={onPeriodChange}
+          selectedPeriod={selectedPeriods.profit}
+          loading={chartLoading.profit}
+          onPeriodChange={(period) => onPeriodChange('profit', period)}
         />
       </div>
       
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <SalesPerformanceChart 
           data={chartData.salesPerformance}
-          selectedPeriod={selectedPeriod}
-          loading={chartLoading}
-          onPeriodChange={onPeriodChange}
+          selectedPeriod={selectedPeriods.salesPerformance}
+          loading={chartLoading.salesPerformance}
+          onPeriodChange={(period) => onPeriodChange('salesPerformance', period)}
         />
         <ExpenseBreakdownChart 
           data={chartData.expenseBreakdown}
-          selectedPeriod={selectedPeriod}
-          loading={chartLoading}
-          onPeriodChange={onPeriodChange}
+          selectedPeriod={selectedPeriods.expenseBreakdown}
+          loading={chartLoading.expenseBreakdown}
+          onPeriodChange={(period) => onPeriodChange('expenseBreakdown', period)}
         />
       </div>
       

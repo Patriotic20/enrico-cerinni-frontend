@@ -31,8 +31,8 @@ const ClientModal = ({
   const loadClients = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await clientsAPI.getClients({ 
-        limit: 20 
+      const response = await clientsAPI.getClients({
+        size: 20
       });
       
       if (response.success && response.data) {
@@ -57,9 +57,9 @@ const ClientModal = ({
 
     setSearchLoading(true);
     try {
-      const response = await clientsAPI.getClients({ 
-        search: term, 
-        limit: 10 
+      const response = await clientsAPI.getClients({
+        search: term,
+        size: 10
       });
       
       if (response.success && response.data) {

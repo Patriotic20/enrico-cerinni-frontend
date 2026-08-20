@@ -19,7 +19,11 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
 
   const loadClients = async () => {
     try {
-      const response = await clientsAPI.getClients({ limit: 100, offset: 0 });
+      // The API paginates with page/size. Sending limit/offset meant the
+      // server fell back to its default of 10 clients, and the search box below
+      // filters that list client-side — so anyone outside the first ten was
+      // simply unreachable here.
+      const response = await clientsAPI.getClients({ page: 1, size: 100 });
       if (response.success && response.data) {
         setClients(response.data.items || []);
       }

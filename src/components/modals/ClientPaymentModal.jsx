@@ -28,9 +28,11 @@ export default function ClientPaymentModal({
 
   const loadClientsWithDebt = async () => {
     try {
-      const response = await clientsAPI.getClients({ 
-        limit: 100,
-        offset: 0
+      // page/size are the API's parameter names; limit/offset were ignored
+      // and capped this list at the server default of 10.
+      const response = await clientsAPI.getClients({
+        page: 1,
+        size: 100
       });
       
       if (response.success && response.data) {

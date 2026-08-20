@@ -5,7 +5,7 @@
  * and cash flow analysis with interactive charts and detailed breakdowns.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   DollarSign,
   TrendingUp, 
@@ -20,40 +20,104 @@ import {
   FileText,
   Wallet
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 import { Card, Button } from '../ui';
 import { cn } from '../../utils/cn';
+import { formatCurrency } from '../../utils/format';
+import { dashboardAPI } from '../../api';
+
+// Transaction amounts are always stored positive; the type says which way the
+// money moved (see the dashboard service).
+const INCOME_TYPES = ['sale', 'debt_payment'];
+
+const TRANSACTION_LABELS = {
+  sale: 'Sotuv',
+  debt_payment: 'Qarz to\'lovi',
+  purchase: 'Xarid',
+  expense: 'Xarajat',
+  refund: 'Qaytarish',
+};
+
+const EXPENSE_LABELS = {
+  suppliers: 'Yetkazib beruvchilar',
+  salaries: 'Maoshlar',
+  rent: 'Ijara',
+  utilities: 'Kommunal',
+  marketing: 'Marketing',
+  other: 'Boshqa',
+};
+
+const formatTxDate = (value) => {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleDateString('uz-UZ');
+};
 
 const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
+  // The finance report payload carries no transaction list, so the table used
+  // to be filled with Math.random() rows that changed on every re-render.
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTransactionsLoading(true);
+    dashboardAPI.getRecentTransactions(15)
+      .then(res => {
+        if (!cancelled && res?.success) setTransactions(res.data || []);
+      })
+      .catch(() => { if (!cancelled) setTransactions([]); })
+      .finally(() => { if (!cancelled) setTransactionsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [selectedView, setSelectedView] = useState('overview');
 
-  // Mock financial data - replace with real API data
+  // Everything below reads the /reports/finance payload. It used to be a
+  // literal object of invented numbers (25.4M revenue against a real 185M),
+  // which made the whole page authoritative-looking fiction.
+  const metrics = data?.metrics || {};
+  const breakdown = data?.expense_breakdown || {};
+  const paymentMethods = data?.payment_methods || {};
+
+  const pctOfRevenue = (value) =>
+    financeData.totalRevenue > 0
+      ? ((value / financeData.totalRevenue) * 100).toFixed(1)
+      : '0.0';
+
+  const num = (value) => {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const financeData = {
-    totalRevenue: 25400000,
-    totalExpenses: 18200000,
-    netProfit: 7200000,
-    profitMargin: 28.3,
-    cashFlow: 5800000,
+    totalRevenue: num(metrics.total_revenue),
+    totalExpenses: num(metrics.total_expenses),
+    netProfit: num(metrics.net_profit),
+    profitMargin: Number(num(metrics.profit_margin).toFixed(1)),
+    cashFlow: num(metrics.cash_flow),
     expenses: {
-      suppliers: 12000000,
-      salaries: 3500000,
-      rent: 1200000,
-      utilities: 800000,
-      marketing: 700000
+      suppliers: num(breakdown.suppliers),
+      salaries: num(breakdown.salaries),
+      rent: num(breakdown.rent),
+      utilities: num(breakdown.utilities),
+      marketing: num(breakdown.marketing),
+      other: num(breakdown.other),
     },
-    monthlyData: [
-      { month: 'Yan', revenue: 2100000, expenses: 1500000, profit: 600000 },
-      { month: 'Fev', revenue: 2300000, expenses: 1600000, profit: 700000 },
-      { month: 'Mar', revenue: 2500000, expenses: 1700000, profit: 800000 },
-      { month: 'Apr', revenue: 2200000, expenses: 1550000, profit: 650000 },
-      { month: 'May', revenue: 2800000, expenses: 1900000, profit: 900000 },
-      { month: 'Iyun', revenue: 3100000, expenses: 2100000, profit: 1000000 }
-    ],
+    monthlyData: (data?.monthly_data || []).map((row) => ({
+      month: row.month,
+      revenue: num(row.revenue),
+      expenses: num(row.expenses),
+      profit: num(row.profit),
+    })),
     paymentMethods: {
-      cash: 15400000,
-      card: 8200000,
-      debt: 1800000
-    }
+      cash: num(paymentMethods.cash),
+      card: num(paymentMethods.card),
+      transfer: num(paymentMethods.transfer),
+      debt: num(paymentMethods.debt),
+    },
   };
 
   const MetricCard = ({ title, value, change, changeType, icon: Icon, color, subtitle }) => (
@@ -65,20 +129,24 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
           {subtitle && (
             <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
           )}
-          <div className="flex items-center gap-1 mt-2">
-            {changeType === 'increase' ? (
-              <ArrowUpRight className="text-green-600" size={16} />
-            ) : (
-              <ArrowDownRight className="text-red-600" size={16} />
-            )}
-            <span className={cn(
-              'text-sm font-medium',
-              changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-            )}>
-              {change}
-            </span>
-            <span className="text-sm text-gray-500">o'tgan oyga nisbatan</span>
-          </div>
+          {/* Only rendered when a real comparison is supplied. The values that
+              used to sit here were hardcoded literals next to live amounts. */}
+          {change && (
+            <div className="flex items-center gap-1 mt-2">
+              {changeType === 'increase' ? (
+                <ArrowUpRight className="text-green-600" size={16} />
+              ) : (
+                <ArrowDownRight className="text-red-600" size={16} />
+              )}
+              <span className={cn(
+                'text-sm font-medium',
+                changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+              )}>
+                {change}
+              </span>
+              <span className="text-sm text-gray-500">o'tgan oyga nisbatan</span>
+            </div>
+          )}
         </div>
         <div className={cn(
           'w-12 h-12 rounded-lg flex items-center justify-center',
@@ -108,7 +176,10 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
 
       <div className="space-y-4">
         {Object.entries(financeData.expenses).map(([category, amount], index) => {
-          const percentage = ((amount / financeData.totalExpenses) * 100).toFixed(1);
+          // Guard the division: with no expenses in the period this printed NaN%.
+          const percentage = financeData.totalExpenses > 0
+            ? ((amount / financeData.totalExpenses) * 100).toFixed(1)
+            : '0.0';
           const colors = [
             'bg-blue-500',
             'bg-green-500',
@@ -122,10 +193,7 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
               <div className="flex items-center gap-3 flex-1">
                 <div className={cn('w-3 h-3 rounded-full', colors[index])}></div>
                 <span className="text-sm font-medium text-gray-900 capitalize">
-                  {category === 'suppliers' ? 'Yetkazib beruvchilar' :
-                   category === 'salaries' ? 'Maoshlar' :
-                   category === 'rent' ? 'Ijara' :
-                   category === 'utilities' ? 'Kommunal' : 'Marketing'}
+                  {EXPENSE_LABELS[category] || category}
                 </span>
               </div>
               <div className="text-right">
@@ -157,24 +225,18 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
         <MetricCard
           title="Umumiy daromad"
           value={`${financeData.totalRevenue.toLocaleString()} UZS`}
-          change="+15.2%"
-          changeType="increase"
           icon={DollarSign}
           color="bg-gradient-to-r from-green-500 to-green-600"
         />
         <MetricCard
           title="Umumiy xarajat"
           value={`${financeData.totalExpenses.toLocaleString()} UZS`}
-          change="+8.7%"
-          changeType="increase"
           icon={CreditCard}
           color="bg-gradient-to-r from-red-500 to-red-600"
         />
         <MetricCard
           title="Sof foyda"
           value={`${financeData.netProfit.toLocaleString()} UZS`}
-          change="+22.1%"
-          changeType="increase"
           icon={TrendingUp}
           color="bg-gradient-to-r from-blue-500 to-blue-600"
           subtitle={`${financeData.profitMargin}% foyda marjasi`}
@@ -182,8 +244,6 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
         <MetricCard
           title="Pul oqimi"
           value={`${financeData.cashFlow.toLocaleString()} UZS`}
-          change="+18.5%"
-          changeType="increase"
           icon={Wallet}
           color="bg-gradient-to-r from-purple-500 to-purple-600"
         />
@@ -218,12 +278,37 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
             </div>
           </div>
           
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <BarChart3 className="mx-auto text-gray-400 mb-2" size={48} />
-              <p className="text-gray-500">Moliyaviy grafik</p>
-              <p className="text-xs text-gray-400 mt-1">Daromad va xarajat taqqoslash grafigi</p>
-            </div>
+          {/* ResponsiveContainer sizes against its parent, so it sits directly
+              inside the element carrying the height. */}
+          <div className="h-64">
+            {financeData.monthlyData.length === 0 ? (
+              <div className="h-full bg-gray-50 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <BarChart3 className="mx-auto text-gray-400 mb-2" size={48} />
+                  <p className="text-gray-500">Ma'lumot yo'q</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={financeData.monthlyData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                    width={60}
+                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => [formatCurrency(value), name]}
+                    contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Daromad" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" name="Xarajat" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="profit" name="Foyda" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -257,7 +342,7 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                   {financeData.paymentMethods.cash.toLocaleString()} UZS
                 </p>
                 <p className="text-xs text-gray-500">
-                  {((financeData.paymentMethods.cash / financeData.totalRevenue) * 100).toFixed(1)}%
+                  {pctOfRevenue(financeData.paymentMethods.cash)}%
                 </p>
               </div>
             </div>
@@ -272,7 +357,7 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                   {financeData.paymentMethods.card.toLocaleString()} UZS
                 </p>
                 <p className="text-xs text-gray-500">
-                  {((financeData.paymentMethods.card / financeData.totalRevenue) * 100).toFixed(1)}%
+                  {pctOfRevenue(financeData.paymentMethods.card)}%
                 </p>
               </div>
             </div>
@@ -287,7 +372,7 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                   {financeData.paymentMethods.debt.toLocaleString()} UZS
                 </p>
                 <p className="text-xs text-gray-500">
-                  {((financeData.paymentMethods.debt / financeData.totalRevenue) * 100).toFixed(1)}%
+                  {pctOfRevenue(financeData.paymentMethods.debt)}%
                 </p>
               </div>
             </div>
@@ -366,35 +451,34 @@ const FinanceReport = ({ data = {}, dateRange, onDateRangeChange }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Xarajat
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Balans
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-                const isIncome = Math.random() > 0.4;
-                const amount = Math.floor(Math.random() * 500000 + 50000);
-                
+              {transactions.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                    {transactionsLoading ? 'Yuklanmoqda...' : 'Amaliyotlar topilmadi'}
+                  </td>
+                </tr>
+              )}
+              {transactions.map((tx) => {
+                const income = INCOME_TYPES.includes(tx.type);
+                const amount = Number(tx.amount) || 0;
+
                 return (
-                  <tr key={i} className="hover:bg-gray-50">
+                  <tr key={tx.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      2024-01-{10 + i}
+                      {formatTxDate(tx.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {isIncome ? `Sotuv #${1000 + i}` : `Xarajat #${2000 + i}`}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {isIncome ? 'Sotuv' : 'Xarajat'}
+                    <td className="px-6 py-4 text-sm text-gray-900">{tx.description}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {TRANSACTION_LABELS[tx.type] || tx.type}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      {isIncome ? `+${amount.toLocaleString()} UZS` : '-'}
+                      {income ? `+${amount.toLocaleString()} UZS` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                      {!isIncome ? `-${amount.toLocaleString()} UZS` : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {(Math.random() * 1000000).toLocaleString()} UZS
+                      {income ? '-' : `-${amount.toLocaleString()} UZS`}
                     </td>
                   </tr>
                 );

@@ -432,13 +432,14 @@ export default function DebtsPage() {
             </div>
           </div>
           
-          {/* Filters - Temporarily disabled for debugging */}
-          {/* <DebtFilters
+          {/* The "Filtrlar" button toggles this panel. It was commented out, so
+              the button did nothing at all. */}
+          <DebtFilters
             filters={filters}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
             showFilters={showFilters}
-          /> */}
+          />
           
           {/* Table Content */}
           {loading ? (

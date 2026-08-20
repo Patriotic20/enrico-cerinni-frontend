@@ -109,7 +109,9 @@ export default function ReceiptModal({
           </div>
           <div className="flex justify-between items-center py-1 border-t border-gray-200">
             <span className="text-base font-semibold text-gray-900">Jami:</span>
-            <span className="text-base font-bold text-green-600">{currentSale ? currentSale.final_amount : (Number(total) || 0).toFixed(2)} UZS</span>
+            {/* The API returns total_amount; there is no final_amount field, so
+                reading it left the receipt total blank on every sale. */}
+            <span className="text-base font-bold text-green-600">{currentSale ? currentSale.total_amount : (Number(total) || 0).toFixed(2)} UZS</span>
           </div>
           {paymentMethod === 'partial' && (
             <>

@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
-import Notification from './components/ui/Notification';
 import { Toaster } from 'react-hot-toast';
 
 // Login stays eager (first paint, public route)
@@ -94,7 +93,6 @@ const App = () => {
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
-              <Notification />
               {/* Notification styling lives here so every toast in the app
                   matches the site design instead of the browser's own dialog. */}
               <Toaster

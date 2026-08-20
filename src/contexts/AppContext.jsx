@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../utils/constants';
+import toast from 'react-hot-toast';
 
 const AppContext = createContext();
 
@@ -91,21 +92,29 @@ export const AppProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_GLOBAL_STATE, payload: newState });
   }, []);
 
-  const showError = useCallback((message, title = 'Xatolik') => {
-    setError({ message, title });
-  }, [setError]);
+  // These go through react-hot-toast, the notification system the rest of the
+  // app already uses and that is styled to match the site.
+  //
+  // They used to write into reducer state instead: showError() stored into
+  // state.error, which no component ever rendered, so every one of those calls
+  // was invisible — a failed validation looked like a dead button. The others
+  // wrote into state.notification, rendered by <Notification />, whose every
+  // className was an empty string.
+  const showError = useCallback((message) => {
+    toast.error(message);
+  }, []);
 
-  const showSuccess = useCallback((message, title = 'Muvaffaqiyatli') => {
-    setNotification({ message, title, type: 'success' });
-  }, [setNotification]);
+  const showSuccess = useCallback((message) => {
+    toast.success(message);
+  }, []);
 
-  const showWarning = useCallback((message, title = 'Ogohlantirish') => {
-    setNotification({ message, title, type: 'warning' });
-  }, [setNotification]);
+  const showWarning = useCallback((message) => {
+    toast(message, { icon: '⚠️' });
+  }, []);
 
-  const showInfo = useCallback((message, title = 'Ma\'lumot') => {
-    setNotification({ message, title, type: 'info' });
-  }, [setNotification]);
+  const showInfo = useCallback((message) => {
+    toast(message);
+  }, []);
 
   const value = {
     // State

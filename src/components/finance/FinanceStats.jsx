@@ -1,5 +1,5 @@
 
-import { TrendingUp, TrendingDown, Users, Building2, Wallet, Calendar } from 'lucide-react';
+import { TrendingDown, Users, Building2, Wallet, Calendar } from 'lucide-react';
 
 const FinanceStats = ({ stats, formatCurrency }) => {
   const statCards = [
@@ -45,38 +45,17 @@ const FinanceStats = ({ stats, formatCurrency }) => {
     }
   ];
 
-  // Calculate percentage change (mock data for now)
-  const getPercentageChange = (index) => {
-    const changes = ['-5.2', '+12.5', '+8.1', '-2.3'];
-    return changes[index] || '0';
-  };
-
-  const isPositive = (change) => change.startsWith('+');
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {statCards.map((card, index) => {
         const Icon = card.icon;
-        const percentageChange = getPercentageChange(index);
-        const isIncrease = isPositive(percentageChange);
         
         return (
           <div key={index} className={`bg-white rounded-xl p-6 shadow-sm border ${card.borderColor} hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}>
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 rounded-lg ${card.bgColor} flex items-center justify-center`}>
                 <Icon className={card.iconColor} size={24} />
-              </div>
-              <div className="text-right">
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  isIncrease ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {isIncrease ? (
-                    <TrendingUp size={12} className="mr-1" />
-                  ) : (
-                    <TrendingDown size={12} className="mr-1" />
-                  )}
-                  {percentageChange}%
-                </div>
               </div>
             </div>
             

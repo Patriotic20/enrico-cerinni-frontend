@@ -15,6 +15,12 @@ RUN npm ci
 COPY . .
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
+
+# NODE_ENV was set to development above so that `npm ci` installs the build
+# tooling. It has to go back to production before building, otherwise React is
+# bundled in development mode: ~65% larger, far slower, and StrictMode
+# double-invokes every effect, so each page fires all its API calls twice.
+ENV NODE_ENV=production
 RUN npm run build
 
 # Production image, use a lightweight static server

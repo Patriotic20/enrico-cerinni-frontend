@@ -7,7 +7,7 @@
  * @page
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, Plus, Trash2, User, Edit, Eye, MessageSquare, Send, Phone, MapPin, Users, Filter } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
@@ -18,6 +18,7 @@ import ClientManagementModal from '../components/modals/ClientManagementModal';
 import ClientMessagingModal from '../components/modals/ClientMessagingModal';
 import { useClientManagement } from '../hooks/useClientManagement';
 import { cn } from '../utils/cn';
+import { salesAPI } from '../api';
 
 // Clients header component
 const ClientsHeader = ({ totalItems, selectedClientsCount, hasSelectedClients, onAddClient, onBulkMessage, onBulkDelete }) => (
@@ -87,11 +88,24 @@ const ClientsHeader = ({ totalItems, selectedClientsCount, hasSelectedClients, o
 
 // Stats cards component
 const ClientsStats = ({ clients, totalItems }) => {
-  const { totalDebt, clientsWithDebt, recentClients } = useMemo(() => {
+  // Debt totals come from the server: `clients` only ever holds the current
+  // page, so summing it reported the first 10 rows as if they were the whole
+  // customer base (10 debtors instead of 27, and a third of the real total).
+  const [debtStats, setDebtStats] = useState({ total_debt: 0, clients_with_debt: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    salesAPI.getDebtStats()
+      .then(res => {
+        if (!cancelled && res?.success && res.data) setDebtStats(res.data);
+      })
+      .catch(() => {/* the cards fall back to zeros */});
+    return () => { cancelled = true; };
+  }, []);
+
+  const { recentClients } = useMemo(() => {
     const now = Date.now();
     return {
-      totalDebt: clients.reduce((sum, client) => sum + (Number(client.debt_amount) || 0), 0),
-      clientsWithDebt: clients.filter(client => (Number(client.debt_amount) || 0) > 0).length,
       recentClients: clients.filter(client => {
         if (!client.last_purchase_date) return false;
         const daysSince = Math.floor((now - new Date(client.last_purchase_date)) / (1000 * 60 * 60 * 24));
@@ -121,8 +135,8 @@ const ClientsStats = ({ clients, totalItems }) => {
           </div>
           <div>
             <p className="text-xs text-gray-600 m-0">Qarzdor mijozlar</p>
-            <p className="text-lg font-bold text-gray-900 m-0">{clientsWithDebt}</p>
-            <p className="text-xs text-red-600 m-0">{totalDebt.toLocaleString()} UZS</p>
+            <p className="text-lg font-bold text-gray-900 m-0">{debtStats.clients_with_debt ?? 0}</p>
+            <p className="text-xs text-red-600 m-0">{Number(debtStats.total_debt || 0).toLocaleString()} UZS</p>
           </div>
         </div>
       </Card>

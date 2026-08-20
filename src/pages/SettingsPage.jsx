@@ -132,7 +132,14 @@ const SettingsPage = () => {
           setSeasons(prev => [...prev, response.data]);
           break;
       }
+      // Nothing confirmed a successful create before, so the form just closed
+      // and the user had to hunt the list to see whether it worked.
+      if (response && response.success === false) {
+        toast.error(response.message || `${tabs.find(tab => tab.id === activeTab).name} yaratilmadi.`);
+        return;
+      }
       setShowAddModal(false);
+      toast.success(`${tabs.find(tab => tab.id === activeTab).name} qo'shildi`);
     } catch (error) {
       console.error(`Error creating ${activeTab}:`, error);
       toast.error(`${tabs.find(tab => tab.id === activeTab).name} yaratishda xatolik yuz berdi.`);
@@ -166,6 +173,7 @@ const SettingsPage = () => {
       }
       setShowEditModal(false);
       setSelectedItem(null);
+      toast.success(`${tabs.find(tab => tab.id === activeTab).name} yangilandi`);
     } catch (error) {
       console.error(`Error updating ${activeTab}:`, error);
       toast.error(`${tabs.find(tab => tab.id === activeTab).name} yangilashda xatolik yuz berdi.`);
@@ -198,6 +206,7 @@ const SettingsPage = () => {
       }
       setShowDeleteModal(false);
       setSelectedItem(null);
+      toast.success(`${tabs.find(tab => tab.id === activeTab).name} o'chirildi`);
     } catch (error) {
       console.error(`Error deleting ${activeTab}:`, error);
       toast.error(`${tabs.find(tab => tab.id === activeTab).name} o'chirishda xatolik yuz berdi.`);

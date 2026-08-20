@@ -43,9 +43,12 @@ export default function useSales() {
         Object.entries(filters).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
       );
 
+      // The API's page-size parameter is `size`; `limit` is ignored, which
+      // pinned every page to the server default of 10 and made the page-size
+      // selector a no-op.
       const params = {
         page: pagination.page,
-        limit: pagination.limit,
+        size: pagination.limit,
         ...filteredParams
       };
 

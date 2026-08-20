@@ -131,3 +131,17 @@ export const SUCCESS_MESSAGES = {
   CLIENT_CREATED: 'Mijoz muvaffaqiyatli qo\'shildi',
   PRODUCT_CREATED: 'Mahsulot muvaffaqiyatli qo\'shildi',
 }; 
+// Uzbek labels for the backend's canonical expense categories. Without these the
+// finance filter and table print raw keys like "daily_expenses" to the user.
+export const EXPENSE_CATEGORY_LABELS = {
+  supplier_costs: 'Yetkazib beruvchi xarajatlari',
+  daily_expenses: 'Kunlik xarajatlar',
+  salary: 'Ish haqi',
+  rent: 'Ijara',
+  utilities: 'Kommunal xizmatlar',
+  marketing: 'Marketing',
+  maintenance: 'Ta\'mirlash',
+  other: 'Boshqa',
+};
+
+export const expenseCategoryLabel = (key) => EXPENSE_CATEGORY_LABELS[key] || key;

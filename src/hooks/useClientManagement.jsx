@@ -51,15 +51,20 @@ export const useClientManagement = (itemsPerPage = 10) => {
   const loadClients = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await clientsAPI.getClients({ 
-        limit: itemsPerPage,
-        offset: (currentPage - 1) * itemsPerPage,
+      // The API paginates with page/size, not limit/offset — sending the wrong
+      // names meant the server silently fell back to its own defaults, so the
+      // list was stuck on the first 10 clients and paging did nothing.
+      const response = await clientsAPI.getClients({
+        page: currentPage,
+        size: itemsPerPage,
         search: debouncedSearchTerm
       });
-      
+
       if (response.success && response.data) {
         setClients(response.data.items || []);
-        setTotalItems(response.data.total || 0);
+        // The total lives under `pagination`, not at the top level; reading the
+        // wrong path left the counter at 0 and hid the pager entirely.
+        setTotalItems(response.data.pagination?.total ?? 0);
       }
     } catch (error) {
       console.error('Error loading clients:', error);

@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { productsAPI, salesAPI, clientsAPI } from '../api';
+import { productsAPI, salesAPI, clientsAPI, employeesAPI } from '../api';
 import { useCart } from './useCart';
 import { useProductSearch } from './useProductSearch';
 import { usePayment } from './usePayment';
 import { useApp } from '../contexts/AppContext';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../utils/constants';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES, PAYMENT_METHODS } from '../utils/constants';
 import logger from '../utils/logger';
+
+const LAST_SELLER_KEY = 'checkout:lastSellerId';
 
 export const useCheckout = () => {
   const { showError, showSuccess } = useApp();
@@ -25,6 +27,31 @@ export const useCheckout = () => {
   const [showClientModal, setShowClientModal] = useState(false);
   const [paymentModal, setPaymentModal] = useState(false);
 
+  // Seller is required per sale. The last pick is remembered (per device) so
+  // a seller ringing up several customers in a row taps nothing.
+  const [sellers, setSellers] = useState([]);
+  const [sellerId, setSellerId] = useState(null);
+  const [sellerError, setSellerError] = useState(false);
+
+  useEffect(() => {
+    employeesAPI.getSellers()
+      .then((res) => {
+        const list = res.data || [];
+        setSellers(list);
+        let saved = null;
+        try { saved = Number(localStorage.getItem(LAST_SELLER_KEY)); } catch { /* storage blocked */ }
+        // A remembered seller who was since deactivated is not offered.
+        if (list.some(s => s.id === saved)) setSellerId(saved);
+      })
+      .catch((error) => logger.error('Error loading sellers:', error));
+  }, []);
+
+  const selectSeller = (id) => {
+    setSellerId(id);
+    setSellerError(false);
+    try { localStorage.setItem(LAST_SELLER_KEY, String(id)); } catch { /* storage blocked */ }
+  };
+
   // Initialize payment hook with cart total and client debt
   const payment = usePayment(cart.total, clientDebt);
 
@@ -41,7 +68,7 @@ export const useCheckout = () => {
     try {
       const response = await clientsAPI.getClient(clientId);
       if (response.success && response.data) {
-        setClientDebt(response.data.current_debt || 0);
+        setClientDebt(Number(response.data.debt_amount) || 0);
       }
     } catch (error) {
       logger.error('Error loading client debt:', error);
@@ -94,8 +121,22 @@ export const useCheckout = () => {
   };
 
   const validateCheckout = () => {
-    if (!selectedClient && !clientName.trim()) {
-      showError(ERROR_MESSAGES.CLIENT_REQUIRED);
+    if (!sellerId) {
+      setSellerError(true);
+      showError('Sotuvchini tanlang');
+      return false;
+    }
+
+    if (payment.paymentMethod !== PAYMENT_METHODS.DEBT && !payment.payType) {
+      showError("To'lov turini tanlang: naqd, karta yoki o'tkazma");
+      return false;
+    }
+
+    // Walk-in cash sales need no client; anything left owing must be tied
+    // to a client or the debt is untracked.
+    if (payment.paymentMethod !== PAYMENT_METHODS.FULL && !selectedClient) {
+      setShowClientModal(true);
+      showError("Qarz yoki qisman to'lov uchun mijozni tanlang");
       return false;
     }
 
@@ -146,6 +187,7 @@ export const useCheckout = () => {
       
       let saleData = {
         client_id: selectedClient ? selectedClient.id : null,
+        seller_id: sellerId,
         total_amount: total_amount,
         discount_amount: discount_amount,
         final_amount: final_amount,
@@ -214,6 +256,10 @@ export const useCheckout = () => {
     ...payment,
     
     // Checkout-specific state
+    sellers,
+    sellerId,
+    sellerError,
+    selectSeller,
     showReceipt,
     clientName,
     clientPhone,

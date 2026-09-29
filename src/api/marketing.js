@@ -57,6 +57,35 @@ export const marketingAPI = {
     }
   },
 
+  // Approved SMS templates from the Eskiz cabinet
+  getSmsTemplates: async () => {
+    const response = await api.get('/marketing/sms/templates');
+    return validateApiResponse(response.data);
+  },
+
+  // Integration credentials (admin only). Secrets are write-only.
+  getIntegrationSettings: async () => {
+    const response = await api.get('/marketing/settings');
+    return validateApiResponse(response.data);
+  },
+
+  updateIntegrationSettings: async (data) => {
+    const response = await api.put('/marketing/settings', data);
+    return validateApiResponse(response.data);
+  },
+
+  // Personal t.me link a client opens to connect to the bot
+  getTelegramLink: async (clientId) => {
+    const response = await api.get(`/marketing/telegram/link/${clientId}`);
+    return validateApiResponse(response.data);
+  },
+
+  // Pick up clients who pressed Start via their link
+  syncTelegramLinks: async () => {
+    const response = await api.post('/marketing/telegram/sync');
+    return validateApiResponse(response.data);
+  },
+
   // Test Telegram bot connection
   testTelegramConnection: async () => {
     try {

@@ -65,8 +65,8 @@ export const getFinanceReport = async (filters = {}) => {
  * Get inventory report
  * @returns {Promise<Object>} Inventory report data
  */
-export const getInventoryReport = async () => {
-  return request(api.get(`${REPORTS_BASE_URL}/inventory`));
+export const getInventoryReport = async (filters = {}) => {
+  return request(api.get(`${REPORTS_BASE_URL}/inventory`, { params: filters }));
 };
 
 /**

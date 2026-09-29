@@ -11,6 +11,8 @@ export function useDashboard() {
     monthlyRevenue: 0,
     monthlyExpenses: 0,
     totalOrders: 0,
+    lowStockProducts: 0,
+    topProducts: [],
   });
 
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -88,6 +90,8 @@ export function useDashboard() {
             monthlyRevenue: apiData.total_revenue || 0,
             monthlyExpenses: apiData.monthly_expenses || 0,
             totalOrders: apiData.total_orders || 0,
+            lowStockProducts: apiData.low_stock_products || 0,
+            topProducts: apiData.top_products || [],
           });
         }
       }

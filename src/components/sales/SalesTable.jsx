@@ -1,121 +1,155 @@
-import { Eye, Edit, Trash2, DollarSign } from 'lucide-react';
-import { Button } from '../ui';
-import Table from '../tables/Table';
+import { Eye, XCircle, Wallet, CreditCard, Banknote, ArrowLeftRight } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { paymentLabel, ymd } from '../../hooks/useSales';
 
-export default function SalesTable({ 
-  sales, 
-  onViewSale, 
-  onEditSale,
+const PAYMENT_ICONS = { cash: Banknote, card: CreditCard, transfer: ArrowLeftRight };
+
+const dayLabel = (key) => {
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (key === ymd(today)) return 'Bugun';
+  if (key === ymd(yesterday)) return 'Kecha';
+  return new Date(key).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', weekday: 'long' });
+};
+
+const IconBtn = ({ title, className, onClick, children }) => (
+  <button
+    type="button"
+    title={title}
+    aria-label={title}
+    onClick={(e) => { e.stopPropagation(); onClick(); }}
+    className={cn('p-1.5 rounded-md transition-colors', className)}
+  >
+    {children}
+  </button>
+);
+
+export default function SalesTable({
+  sales,
+  onViewSale,
   onCancelSale,
   onPayDebt,
-  formatDate, 
-  formatCurrency, 
-  getStatusBadge 
+  formatTime,
+  formatCurrency,
+  getStatusBadge
 }) {
-  const columns = [
-    {
-      key: 'receipt_number',
-      label: 'Chek',
-      width: 'w-12',
-      render: (value) => {
-        const truncated = value && value.length > 8 
-          ? `${value.slice(0, 4)}...${value.slice(-4)}` 
-          : value;
-        return <strong className="text-blue-600 text-xs" title={`#${value}`}>#{truncated}</strong>;
-      }
-    },
-    {
-      key: 'client_name',
-      label: 'Mijoz',
-      render: (value) => <span className="text-gray-900">{value || 'Noma\'lum'}</span>
-    },
-    {
-      key: 'total_amount',
-      label: 'Summa',
-      render: (value, sale) => (
-        <div className="space-y-1">
-          <span className="font-semibold text-gray-900">{formatCurrency(value)}</span>
-          {sale.paid_amount > 0 && sale.paid_amount < value && (
-            <div className="text-xs space-y-0.5">
-              <span className="block text-green-600">To'langan: {formatCurrency(sale.paid_amount)}</span>
-              <span className="block text-red-600">Qoldi: {formatCurrency(value - sale.paid_amount)}</span>
-            </div>
-          )}
-        </div>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Holat',
-      width: 'w-32',
-      render: (value) => getStatusBadge(value)
-    },
-    {
-      key: 'created_at',
-      label: 'Sana',
-      render: (value) => <span className="text-gray-500 text-sm">{formatDate(value)}</span>
-    },
-    {
-      key: 'actions',
-      label: 'Amallar',
-      render: (_, sale) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            onClick={() => onViewSale(sale.id)}
-            title="Ko'rish"
-          >
-            <Eye size={16} />
-          </Button>
-          {onEditSale && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-              onClick={() => onEditSale(sale)}
-              title="Tahrirlash"
-            >
-              <Edit size={16} />
-            </Button>
-          )}
-          {/* Show debt payment button for debt or partially paid sales */}
-          {(sale.status === 'debt' || sale.status === 'partially_paid') && onPayDebt && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={() => onPayDebt(sale)}
-              title="Qarzdorlik to'lash"
-            >
-              <DollarSign size={16} />
-            </Button>
-          )}
-          {sale.status === 'completed' && onCancelSale && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => onCancelSale(sale.id)}
-              title="Bekor qilish"
-            >
-              <Trash2 size={16} />
-            </Button>
-          )}
-        </div>
-      )
-    }
-  ];
+  // Group this page's rows by local day so the list reads like a register.
+  const days = [];
+  for (const sale of sales) {
+    const key = ymd(new Date(sale.created_at));
+    let day = days[days.length - 1];
+    if (!day || day.key !== key) days.push(day = { key, sales: [], total: 0 });
+    day.sales.push(sale);
+    // Amounts arrive as decimal strings; += would concatenate them.
+    if (sale.status !== 'cancelled') day.total += Number(sale.total_amount) || 0;
+  }
 
   return (
     <div className="overflow-x-auto">
-      <Table
-        data={sales}
-        columns={columns}
-        className="w-full"
-      />
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200">
+            <th className="py-2.5 px-3 font-medium">Chek / vaqt</th>
+            <th className="py-2.5 px-3 font-medium">Mijoz / sotuvchi</th>
+            <th className="py-2.5 px-3 font-medium">Mahsulotlar</th>
+            <th className="py-2.5 px-3 font-medium">To'lov</th>
+            <th className="py-2.5 px-3 font-medium text-right">Summa</th>
+            <th className="py-2.5 px-3 font-medium">Holat</th>
+            <th className="py-2.5 px-3 w-24" />
+          </tr>
+        </thead>
+        {days.map(day => (
+          <tbody key={day.key}>
+            <tr className="bg-gray-50">
+              <td colSpan={7} className="px-3 py-1.5 text-xs">
+                <span className="font-semibold text-gray-700 capitalize">{dayLabel(day.key)}</span>
+                <span className="text-gray-500"> · {day.sales.length} ta · </span>
+                <span className="font-medium text-gray-700 tabular-nums">{formatCurrency(day.total)}</span>
+              </td>
+            </tr>
+            {day.sales.map(sale => {
+              const cancelled = sale.status === 'cancelled';
+              const hasDebt = sale.status === 'debt' || sale.status === 'partially_paid';
+              const debt = sale.total_amount - sale.paid_amount;
+              const paidPct = sale.total_amount > 0 ? (sale.paid_amount / sale.total_amount) * 100 : 0;
+              const qty = sale.items.reduce((n, i) => n + i.quantity, 0);
+              const first = sale.items[0];
+              const PayIcon = PAYMENT_ICONS[sale.payment_method] || Wallet;
+              return (
+                <tr
+                  key={sale.id}
+                  onClick={() => onViewSale(sale.id)}
+                  className={cn(
+                    'border-b border-gray-100 cursor-pointer hover:bg-blue-50/40 transition-colors',
+                    cancelled && 'opacity-55'
+                  )}
+                >
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <div className="font-mono text-xs text-blue-600">{sale.receipt_number}</div>
+                    <div className="text-xs text-gray-500">{formatTime(sale.created_at)}</div>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {sale.client_name
+                      ? <span className="text-gray-900">{sale.client_name}</span>
+                      : <span className="text-gray-400">Mijozsiz</span>}
+                    {sale.seller_name && (
+                      <div className="text-xs text-gray-500">Sotuvchi: {sale.seller_name}</div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 max-w-[260px]">
+                    {first ? (
+                      <>
+                        <div className="truncate text-gray-900" title={sale.items.map(i => i.product_name).join(', ')}>
+                          {first.product_name}
+                          {sale.items.length > 1 && <span className="text-gray-500"> +{sale.items.length - 1}</span>}
+                        </div>
+                        <div className="text-xs text-gray-500">{qty} dona</div>
+                      </>
+                    ) : <span className="text-gray-400">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">
+                    <span className="inline-flex items-center gap-1.5">
+                      <PayIcon size={14} className="text-gray-400" />
+                      {paymentLabel(sale.payment_method)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap tabular-nums">
+                    <div className={cn('font-semibold text-gray-900', cancelled && 'line-through')}>
+                      {formatCurrency(sale.total_amount)}
+                    </div>
+                    {hasDebt && (
+                      <div className="mt-1 ml-auto w-36">
+                        <div className="h-1.5 rounded-full bg-red-100 overflow-hidden">
+                          <div className="h-full bg-green-500" style={{ width: `${paidPct}%` }} />
+                        </div>
+                        <div className="text-xs text-red-600 mt-0.5">Qarz: {formatCurrency(debt)}</div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5">{getStatusBadge(sale.status)}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center justify-end gap-0.5">
+                      {hasDebt && onPayDebt && (
+                        <IconBtn title="Qarzni to'lash" onClick={() => onPayDebt(sale)} className="text-green-600 hover:bg-green-50">
+                          <Wallet size={16} />
+                        </IconBtn>
+                      )}
+                      <IconBtn title="Ko'rish" onClick={() => onViewSale(sale.id)} className="text-gray-500 hover:text-blue-600 hover:bg-blue-50">
+                        <Eye size={16} />
+                      </IconBtn>
+                      {sale.status === 'completed' && onCancelSale && (
+                        <IconBtn title="Bekor qilish" onClick={() => onCancelSale(sale.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50">
+                          <XCircle size={16} />
+                        </IconBtn>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        ))}
+      </table>
     </div>
   );
-} 
+}

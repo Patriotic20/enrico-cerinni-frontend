@@ -49,34 +49,34 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">Foyda tahlili</h2>
-        <div className="flex items-center gap-4">
+    <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-2">
+        <h2 className="text-sm font-semibold text-gray-900">Foyda tahlili</h2>
+        <div className="flex flex-wrap items-center gap-2">
           {onPeriodChange && (
             <TimePeriodSelector 
               selectedPeriod={selectedPeriod}
               onPeriodChange={onPeriodChange}
             />
           )}
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               <span className="text-gray-600">Daromad</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
               <span className="text-gray-600">Xarajat</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <span className="text-gray-600">Foyda</span>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="relative h-80">
+      <div className="relative h-44">
         {/* Loading Overlay */}
         {loading && (
           <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10 rounded-lg">
@@ -89,15 +89,15 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
         
         <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
                 dataKey="month" 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 10, fill: '#6b7280' }}
                 axisLine={{ stroke: '#e5e7eb' }}
               />
               <YAxis 
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 10, fill: '#6b7280' }}
                 axisLine={{ stroke: '#e5e7eb' }}
                 tickFormatter={compactAmount}
               />
@@ -129,21 +129,9 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
       </div>
       
       {/* Profit Margin Summary */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">
-              {chartData.length > 0 ? `${avgMargin.toFixed(1)}%` : '0%'}
-            </p>
-            <p className="text-sm text-gray-600">O'rtacha margin</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalProfit)}
-            </p>
-            <p className="text-sm text-gray-600">Jami foyda</p>
-          </div>
-        </div>
+      <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-xs text-gray-500">
+        <span>O'rtacha margin: <b className="text-green-600">{avgMargin.toFixed(1)}%</b></span>
+        <span>Jami foyda: <b className="text-blue-600">{formatCurrency(totalProfit)}</b></span>
       </div>
     </div>
   );

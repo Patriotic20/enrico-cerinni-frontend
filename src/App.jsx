@@ -1,8 +1,10 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ROUTES, isStaff } from './utils/constants';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
+import Layout from './components/layout/Layout';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -12,6 +14,7 @@ import LoginPage from './pages/LoginPage';
 // Lazy-load protected pages — each becomes its own chunk, loaded on demand
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const ProductLookupPage = lazy(() => import('./pages/ProductLookupPage'));
 const SalesPage = lazy(() => import('./pages/SalesPage'));
 const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
@@ -21,6 +24,8 @@ const DebtsPage = lazy(() => import('./pages/DebtsPage'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
+const EmployeeDetailPage = lazy(() => import('./pages/EmployeeDetailPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const FullScreenLoader = () => (
@@ -50,6 +55,12 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Cashiers who open a staff-only URL land on the checkout page instead.
+const StaffRoute = () => {
+  const { user } = useAuth();
+  return isStaff(user) ? <Outlet /> : <Navigate to={ROUTES.CHECKOUT} replace />;
+};
+
 const PageFallback = () => (
   <div style={{
     display: 'flex',
@@ -77,17 +88,24 @@ const App = () => {
 
                   {/* Protected Routes */}
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                  <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-                  <Route path="/sales" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
-                  <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-                  <Route path="/inventory/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
-                  <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-                  <Route path="/finance" element={<ProtectedRoute><FinancePage /></ProtectedRoute>} />
-                  <Route path="/debts" element={<ProtectedRoute><DebtsPage /></ProtectedRoute>} />
-                  <Route path="/marketing" element={<ProtectedRoute><MarketingPage /></ProtectedRoute>} />
-                  <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-                  <Route path="/settings/*" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+                  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/lookup" element={<ProductLookupPage />} />
+                    <Route path="/clients" element={<ClientsPage />} />
+                    <Route path="/debts" element={<DebtsPage />} />
+                    <Route element={<StaffRoute />}>
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/sales" element={<SalesPage />} />
+                      <Route path="/inventory" element={<InventoryPage />} />
+                      <Route path="/inventory/:id" element={<ProductDetailPage />} />
+                      <Route path="/finance" element={<FinancePage />} />
+                      <Route path="/marketing" element={<MarketingPage />} />
+                      <Route path="/reports" element={<ReportsPage />} />
+                      <Route path="/employees" element={<EmployeesPage />} />
+                      <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+                      <Route path="/settings/*" element={<SettingsPage />} />
+                    </Route>
+                  </Route>
 
                   {/* Unknown URLs render a 404 page instead of a blank screen */}
                   <Route path="*" element={<NotFoundPage />} />

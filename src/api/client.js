@@ -7,11 +7,12 @@ const getBaseURL = () => {
   //   1. window.__APP_CONFIG__.apiUrl  — injected at container startup via docker-entrypoint.sh
   //      (runtime, no rebuild required — the correct approach for Railway deployments)
   //   2. import.meta.env.VITE_API_URL  — baked in at build time (local dev / CI overrides)
-  //   3. Hard-coded public backend domain as a last-resort fallback
+  //   3. Dev: '/api' through the Vite proxy (-> VITE_DEV_API_TARGET / localhost:8000);
+  //      prod: hard-coded public backend domain as a last-resort fallback
   let url =
     (typeof window !== 'undefined' && window.__APP_CONFIG__?.apiUrl) ||
     import.meta.env.VITE_API_URL ||
-    'https://api.enrico.uz';
+    (import.meta.env.DEV ? '/api' : 'https://api.enrico.uz');
 
   // Normalise bare hostnames that are missing a protocol
   if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
@@ -94,6 +95,13 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+    }
+
+    // With the default JSON Content-Type axios serializes FormData to JSON, so
+    // multipart endpoints (Telegram broadcast with image) got no form fields.
+    // Dropping it lets the browser send multipart/form-data with the boundary.
+    if (config.data instanceof FormData) {
+      config.headers.setContentType(null);
     }
 
     return config;

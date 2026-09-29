@@ -1,5 +1,5 @@
-import { User, Edit, AlertCircle } from 'lucide-react';
-import Button from '../ui/Button';
+import { UserPlus, X, ChevronRight } from 'lucide-react';
+import { formatCurrency } from '../../utils/format';
 
 export default function ClientSection({
   selectedClient,
@@ -7,60 +7,57 @@ export default function ClientSection({
   setShowClientModal,
   setSelectedClient
 }) {
+  const debt = Number(clientDebt) || 0;
+
+  if (!selectedClient) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShowClientModal(true)}
+        className="w-full flex items-center gap-3 h-14 px-3 rounded-xl border-2 border-dashed border-gray-300 text-left hover:border-blue-500 hover:bg-blue-50/50 transition-colors"
+      >
+        <UserPlus size={22} className="text-gray-400 shrink-0" />
+        <span className="flex-1 min-w-0 text-base font-semibold text-gray-800">
+          Mijoz <span className="font-normal text-gray-400">· ixtiyoriy</span>
+        </span>
+        <ChevronRight size={20} className="text-gray-400" />
+      </button>
+    );
+  }
+
+  const name = selectedClient.first_name && selectedClient.last_name
+    ? `${selectedClient.first_name} ${selectedClient.last_name}`.trim()
+    : selectedClient.name || '';
+
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-purple-600 rounded flex items-center justify-center">
-          <User size={14} className="text-white" />
-        </div>
-        <h3 className="m-0 text-sm font-semibold text-gray-900">Mijoz</h3>
-      </div>
-      
-      {selectedClient ? (
-        <div className="flex flex-col gap-1.5">
-          <div>
-            <h4 className="m-0 mb-0.5 text-xs font-semibold text-gray-900 truncate">{selectedClient.first_name && selectedClient.last_name 
-              ? `${selectedClient.first_name} ${selectedClient.last_name}`.trim()
-              : selectedClient.name || ''}</h4>
-            {selectedClient.phone && <p className="m-0 text-xs text-gray-500">📞 {selectedClient.phone}</p>}
-            {(Number(clientDebt) || 0) > 0 && (
-              <div className="flex items-center gap-1 p-1 bg-amber-100 border border-amber-500 rounded mt-1">
-                <AlertCircle size={12} />
-                <span className="text-xs font-medium text-amber-800">Qarzdorlik: {(Number(clientDebt) || 0).toFixed(2)} UZS</span>
-              </div>
-            )}
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            <Button
-              onClick={() => setShowClientModal(true)}
-              variant="secondary"
-              size="sm"
-              className="text-xs px-2 py-1"
-            >
-              <Edit size={12} />
-              O'zgartirish
-            </Button>
-            <Button
-              onClick={() => setSelectedClient(null)}
-              variant="secondary"
-              size="sm"
-              className="text-xs px-2 py-1"
-            >
-              Bekor qilish
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <Button
-            onClick={() => setShowClientModal(true)}
-            className="w-full justify-center text-xs py-2"
-          >
-            <User size={14} />
-            Mijozni tanlash
-          </Button>
-        </div>
+    <div className="flex items-center gap-2 h-14 pl-2 pr-1 rounded-xl border-2 border-purple-200 bg-purple-50/50">
+      <button
+        type="button"
+        onClick={() => setShowClientModal(true)}
+        title="O'zgartirish"
+        className="flex-1 min-w-0 flex items-center gap-2.5 text-left"
+      >
+        <span className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center text-base font-bold shrink-0">
+          {name.charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-base font-semibold text-gray-900 truncate">{name}</span>
+          {selectedClient.phone && <span className="block text-xs text-gray-500">{selectedClient.phone}</span>}
+        </span>
+      </button>
+      {debt > 0 && (
+        <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-semibold whitespace-nowrap">
+          Qarz: {formatCurrency(debt)}
+        </span>
       )}
+      <button
+        type="button"
+        aria-label="Mijozni olib tashlash"
+        onClick={() => setSelectedClient(null)}
+        className="w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-800 hover:bg-white"
+      >
+        <X size={20} />
+      </button>
     </div>
   );
-} 
+}

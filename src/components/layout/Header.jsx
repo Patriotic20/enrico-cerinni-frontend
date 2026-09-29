@@ -48,6 +48,8 @@ const Header = ({ onMenuClick, className, ...props }) => {
         'px-4 sm:px-6 py-3',
         'flex items-center justify-between',
         'sticky top-0 z-40',
+        // Only holds the mobile menu toggle; hidden on desktop so it doesn't eat vertical space
+        'md:hidden',
         className
       )}
       {...props}

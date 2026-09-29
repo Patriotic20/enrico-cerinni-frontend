@@ -30,7 +30,10 @@ export const PAYMENT_METHODS = {
   DEBT: 'debt',
   CASH: 'cash',
   TRANSFER: 'transfer',
+  CARD: 'card',
 };
+
+export const PAY_TYPE_LABELS = { cash: 'Naqd', card: 'Karta', transfer: "O'tkazma" };
 
 // Modal sizes
 export const MODAL_SIZES = {
@@ -54,6 +57,7 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   CHECKOUT: '/checkout',
+  LOOKUP: '/lookup',
   SALES: '/sales',
   INVENTORY: '/inventory',
   CLIENTS: '/clients',
@@ -62,6 +66,7 @@ export const ROUTES = {
   REPORTS: '/reports',
   SETTINGS: '/settings',
   DEBTS: '/debts',
+  EMPLOYEES: '/employees',
   SETTINGS_CATEGORIES: '/settings/categories',
   SETTINGS_BRANDS: '/settings/brands',
   SETTINGS_COLORS: '/settings/colors',
@@ -69,16 +74,26 @@ export const ROUTES = {
   SETTINGS_SEASONS: '/settings/seasons',
 };
 
+// Admins and managers see everything; cashiers (role "user") only sell, manage
+// clients and collect debts. The backend enforces the same split.
+export const STAFF_ROLES = ['admin', 'manager'];
+export const isStaff = (user) => STAFF_ROLES.includes(user?.role);
+
+// Flat list (Header looks titles up by href); `group` drives sidebar sections.
+// Items with no group render at the top without a heading.
 export const NAVIGATION_ITEMS = [
-  { name: 'Analitika', href: ROUTES.DASHBOARD, icon: 'Home' },
-  { name: 'Sotuv', href: ROUTES.CHECKOUT, icon: 'ShoppingCart' },
-  { name: 'Moliya', href: ROUTES.SALES, icon: 'Receipt' },
-  { name: 'Qarzdorliklar', href: ROUTES.DEBTS, icon: 'AlertCircle' },
-  { name: 'Inventar', href: ROUTES.INVENTORY, icon: 'Package' },
-  { name: 'Mijozlar', href: ROUTES.CLIENTS, icon: 'Users' },
-  { name: 'Xarajatlar', href: ROUTES.FINANCE, icon: 'DollarSign' },
-  { name: 'Marketing', href: ROUTES.MARKETING, icon: 'MessageSquare' },
-  { name: 'Hisobotlar', href: ROUTES.REPORTS, icon: 'BarChart3' },
+  { name: 'Analitika', href: ROUTES.DASHBOARD, icon: 'Home', staffOnly: true },
+  { name: 'Sotuv', href: ROUTES.CHECKOUT, icon: 'ShoppingCart', group: 'Savdo' },
+  { name: 'Mahsulot qidirish', href: ROUTES.LOOKUP, icon: 'ScanSearch', group: 'Savdo' },
+  { name: 'Mijozlar', href: ROUTES.CLIENTS, icon: 'Users', group: 'Savdo' },
+  { name: 'Qarzdorliklar', href: ROUTES.DEBTS, icon: 'AlertCircle', group: 'Savdo' },
+  { name: 'Moliya', href: ROUTES.SALES, icon: 'Receipt', staffOnly: true, group: 'Hisob-kitob' },
+  { name: 'Xarajatlar', href: ROUTES.FINANCE, icon: 'DollarSign', staffOnly: true, group: 'Hisob-kitob' },
+  { name: 'Hisobotlar', href: ROUTES.REPORTS, icon: 'BarChart3', staffOnly: true, group: 'Hisob-kitob' },
+  { name: 'Xodimlar', href: ROUTES.EMPLOYEES, icon: 'UserCheck', staffOnly: true, group: 'Boshqaruv' },
+  { name: 'Inventar', href: ROUTES.INVENTORY, icon: 'Package', staffOnly: true, group: 'Boshqaruv' },
+  { name: 'Marketing', href: ROUTES.MARKETING, icon: 'MessageSquare', staffOnly: true, group: 'Boshqaruv' },
+  { name: 'Sozlamalar', href: ROUTES.SETTINGS, icon: 'Settings', staffOnly: true, group: 'Boshqaruv' },
 ];
 
 export const SETTINGS_ITEMS = [
@@ -120,7 +135,7 @@ export const ERROR_MESSAGES = {
   PAYMENT_VALIDATION: {
     FULL_PAYMENT_ENTERED: 'To\'liq to\'lov kiritilgan. To\'liq to\'lov usulini tanlang.',
     AMOUNT_REQUIRED: 'Iltimos, to\'langan summani kiriting.',
-    CLIENT_DEBT: 'Mijozda qarzdorlik mavjud. Iltimos, avval qarzdorlikni to\'lang.',
+    CLIENT_DEBT: 'Mijozning mavjud qarzi:',
   },
 };
 

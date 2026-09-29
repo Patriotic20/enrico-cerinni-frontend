@@ -3,6 +3,29 @@ import { salesAPI } from '../api';
 import { useConfirm } from '../contexts/ConfirmContext';
 import toast from 'react-hot-toast';
 
+// Local YYYY-MM-DD; toISOString() would shift to UTC and give yesterday
+// before 05:00 in Tashkent.
+export const ymd = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const EMPTY_FILTERS = {
+  search: '',
+  start_date: '',
+  end_date: '',
+  client_id: '',
+  seller_id: '',
+  status: '',
+  payment_method: '',
+  min_amount: '',
+  max_amount: ''
+};
+
+const activeParams = (filters) =>
+  Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v != null));
+
+const PAYMENT_LABELS = { cash: 'Naqd', card: 'Karta', transfer: "O'tkazma" };
+export const paymentLabel = (m) => PAYMENT_LABELS[m] || m || '—';
+
 export default function useSales() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,23 +37,22 @@ export default function useSales() {
   const [clientDebts, setClientDebts] = useState([]);
   const [debtHistory, setDebtHistory] = useState([]);
   const [stats, setStats] = useState({
-    totalSales: 0,
-    totalRevenue: 0,
-    avgOrderValue: 0,
-    completedSales: 0
+    total_sales: 0,
+    total_revenue: 0,
+    paid_amount: 0,
+    outstanding: 0,
+    avg_order_value: 0,
+    debt_sales: 0,
+    cancelled_sales: 0
   });
-  const [filters, setFilters] = useState({
-    search: '',
-    start_date: '',
-    end_date: '',
-    client_id: '',
-    status: '',
-    min_amount: '',
-    max_amount: ''
+  // Default to this month so the list and the KPI cards describe the same set.
+  const [filters, setFilters] = useState(() => {
+    const now = new Date();
+    return { ...EMPTY_FILTERS, start_date: ymd(new Date(now.getFullYear(), now.getMonth(), 1)) };
   });
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 15,
+    limit: 20,
     total: 0,
     pages: 0
   });
@@ -39,9 +61,7 @@ export default function useSales() {
   const loadSales = async () => {
     setLoading(true);
     try {
-      const filteredParams = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-      );
+      const filteredParams = activeParams(filters);
 
       // The API's page-size parameter is `size`; `limit` is ignored, which
       // pinned every page to the server default of 10 and made the page-size
@@ -71,24 +91,9 @@ export default function useSales() {
 
   const loadStats = async () => {
     try {
-      // Check if any date filters are applied
-      const hasDateFilters = filters.start_date || filters.end_date;
-      
-      let statsParams = { ...filters };
-      
-      // If no date filters are applied, set current month as default
-      if (!hasDateFilters) {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        statsParams = {
-          ...filters,
-          start_date: startOfMonth.toISOString().split('T')[0],
-          end_date: endOfMonth.toISOString().split('T')[0]
-        };
-      }
-      
+      // Same filters as the list, so the cards always match the table.
+      const statsParams = activeParams(filters);
+
       const response = await salesAPI.getSalesStats(statsParams);
       if (response.success && response.data) {
         setStats(response.data);
@@ -183,6 +188,11 @@ export default function useSales() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  const setDateRange = (start_date, end_date) => {
+    setFilters(prev => ({ ...prev, start_date, end_date }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
   };
@@ -196,26 +206,55 @@ export default function useSales() {
   };
 
   const clearFilters = () => {
-    setFilters({
-      search: '',
-      start_date: '',
-      end_date: '',
-      client_id: '',
-      status: '',
-      min_amount: '',
-      max_amount: ''
-    });
+    setFilters(EMPTY_FILTERS);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const exportReport = () => {
-    // TODO: Implement export functionality
-    toast('Hisobot eksport qilish funksiyasi tez orada qo\'shiladi');
+  // CSV of every sale matching the current filters (not just this page).
+  const exportReport = async () => {
+    const id = toast.loading('Eksport tayyorlanmoqda...');
+    try {
+      const rows = [];
+      for (let page = 1, pages = 1; page <= pages; page++) {
+        const res = await salesAPI.getSales({ ...activeParams(filters), page, size: 100 });
+        rows.push(...(res.data?.items || []));
+        pages = res.data?.pagination?.pages || 1;
+      }
+      const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const header = ['Chek', 'Sana', 'Mijoz', 'Sotuvchi', 'Mahsulotlar', 'Soni', "To'lov", 'Summa', "To'langan", 'Qarz', 'Holat'];
+      const lines = rows.map(s => [
+        s.receipt_number,
+        new Date(s.created_at).toLocaleString('uz-UZ'),
+        s.client_name || '',
+        s.seller_name || '',
+        s.items.map(i => `${i.product_name} (${i.color_name}/${i.size_name}) x${i.quantity}`).join('; '),
+        s.items.reduce((n, i) => n + i.quantity, 0),
+        paymentLabel(s.payment_method),
+        s.total_amount,
+        s.paid_amount,
+        s.status === 'cancelled' ? 0 : s.total_amount - s.paid_amount,
+        s.status
+      ].map(esc).join(','));
+      // BOM so Excel opens UTF-8 correctly.
+      const blob = new Blob(['﻿' + [header.map(esc).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `sotuvlar_${ymd(new Date())}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success(`${rows.length} ta sotuv eksport qilindi`, { id });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Eksportda xatolik', { id });
+    }
   };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('uz-UZ');
   };
+
+  const formatTime = (dateString) =>
+    new Date(dateString).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('uz-UZ', {
@@ -288,6 +327,7 @@ export default function useSales() {
     handleViewClientDebts,
     handleViewDebtHistory,
     handleFilterChange,
+    setDateRange,
     handlePageChange,
     handlePageSizeChange,
     clearFilters,
@@ -295,6 +335,7 @@ export default function useSales() {
     
     // Utilities
     formatDate,
+    formatTime,
     formatCurrency,
     getStatusBadge
   };

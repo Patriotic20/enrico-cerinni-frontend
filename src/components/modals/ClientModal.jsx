@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, User, Phone, MapPin, FileText, ArrowLeft } from 'lucide-react';
+import { Search, UserPlus, User, Phone, ArrowLeft } from 'lucide-react';
 import Modal from './Modal';
-import Button from '../ui/Button';
-import Input from '../forms/Input';
+import { formatCurrency } from '../../utils/format';
 import { clientsAPI } from '../../api';
 import toast from 'react-hot-toast';
 
@@ -138,252 +137,170 @@ const ClientModal = ({
     setNewClient({ first_name: '', last_name: '', phone: '', address: '', notes: '' });
   };
 
-  // Determine which clients to display
-  const displayClients = searchTerm.trim() ? searchResults : clients;
   const isSearching = searchTerm.trim() && searchLoading;
-  const showInitialList = !searchTerm.trim() && !loading && clients.length > 0;
-  const showNoResults = searchTerm.trim() && !searchLoading && searchResults.length === 0;
-  const showEmptyState = !searchTerm.trim() && !loading && clients.length === 0;
+  const list = searchTerm.trim() ? searchResults : clients;
+  const busy = loading || isSearching;
+  const inputCls = 'w-full h-12 px-4 text-base rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={showCreateForm ? "Yangi mijoz yaratish" : "Mijozni tanlash"}
+      title={showCreateForm ? "Yangi mijoz" : "Mijozni tanlash"}
       size="md"
     >
-      <div className="space-y-6">
-        {!showCreateForm ? (
-          <>
-            {/* Search Section */}
-            <div className="space-y-4">
-              <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
-                <Input
-                  placeholder="Mijoz ismi yoki telefon bo'yicha qidirish..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-
-              {/* Loading state */}
-              {(loading || isSearching) && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm text-gray-600">{loading ? 'Mijozlar yuklanmoqda...' : 'Qidirilmoqda...'}</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Search results */}
-              {!isSearching && !loading && searchTerm.trim() && searchResults.length > 0 && (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {searchResults.map(client => (
-                    <div
-                      key={client.id}
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200 group"
-                      onClick={() => handleClientSelect(client)}
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User size={16} className="text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate">
-                          {client.first_name} {client.last_name}
-                        </h4>
-                        {client.phone && (
-                          <p className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-                            <Phone size={12} />
-                            {client.phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Initial clients list */}
-              {showInitialList && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-900">Mavjud mijozlar</h4>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{clients.length} mijoz</span>
-                  </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {clients.map(client => (
-                      <div
-                        key={client.id}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200 group"
-                        onClick={() => handleClientSelect(client)}
-                      >
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User size={16} className="text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 truncate">
-                            {client.first_name} {client.last_name}
-                          </h4>
-                          {client.phone && (
-                            <p className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-                              <Phone size={12} />
-                              {client.phone}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* No search results */}
-              {showNoResults && (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                    <User size={32} className="text-gray-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-semibold text-gray-900">Mijoz topilmadi</h4>
-                    <p className="text-sm text-gray-600">Qidiruv natijasiga mos mijoz mavjud emas</p>
-                  </div>
-                  <Button
-                    onClick={() => setShowCreateForm(true)}
-                    className="inline-flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Yangi mijoz yaratish
-                  </Button>
-                </div>
-              )}
-
-              {/* Empty state */}
-              {showEmptyState && (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                    <User size={32} className="text-gray-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-semibold text-gray-900">Mijozlar mavjud emas</h4>
-                    <p className="text-sm text-gray-600">Hali hech qanday mijoz qo'shilmagan</p>
-                  </div>
-                  <Button
-                    onClick={() => setShowCreateForm(true)}
-                    className="inline-flex items-center gap-2"
-                  >
-                    <Plus size={16} />
-                    Birinchi mijozni yaratish
-                  </Button>
-                </div>
-              )}
-
-              {/* Initial empty state */}
-              {!searchTerm.trim() && !loading && !showInitialList && !showEmptyState && (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                    <Search size={32} className="text-blue-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-semibold text-gray-900">Mijoz qidirish</h4>
-                    <p className="text-sm text-gray-600">Mijozni topish uchun nom yoki telefon kiriting</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Create New Client Button */}
-            <div className="pt-4 border-t border-gray-200">
-              <Button
-                onClick={() => setShowCreateForm(true)}
-                variant="secondary"
-                className="w-full justify-center gap-2"
-              >
-                <Plus size={16} />
-                Yangi mijoz yaratish
-              </Button>
-            </div>
-          </>
-        ) : (
-          /* Create Client Form */
-          <div className="space-y-6">
-            {/* Back Button */}
-            <div className="flex items-center">
-              <button 
-                onClick={() => setShowCreateForm(false)}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft size={16} />
-                Orqaga
-              </button>
-            </div>
-            
-            {/* Form Fields */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Ism"
-                  value={newClient.first_name}
-                  onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
-                  placeholder="Mijoz ismini kiriting"
-                  required
-                />
-                
-                <Input
-                  label="Familiya"
-                  value={newClient.last_name}
-                  onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
-                  placeholder="Mijoz familiyasini kiriting"
-                  required
-                />
-              </div>
-              
-              <Input
-                label="Telefon raqami"
-                value={newClient.phone}
-                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                placeholder="Telefon raqamini kiriting"
-              />
-              
-              <Input
-                label="Manzil"
-                value={newClient.address}
-                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                placeholder="Mijoz manzilini kiriting"
-              />
-              
-              <Input
-                label="Izohlar"
-                value={newClient.notes}
-                onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
-                placeholder="Qo'shimcha ma'lumotlar..."
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <Button
-                onClick={handleCreateClient}
-                disabled={!newClient.first_name.trim() || !newClient.last_name.trim() || createLoading}
-                className="flex-1"
-              >
-                {createLoading ? 'Yaratilmoqda...' : 'Mijozni yaratish'}
-              </Button>
-              
-              <Button
-                onClick={() => setShowCreateForm(false)}
-                variant="secondary"
-                className="flex-1"
-              >
-                Bekor qilish
-              </Button>
-            </div>
+      {!showCreateForm ? (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              autoFocus
+              placeholder="Ism yoki telefon raqami..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={`${inputCls} h-14 pl-12 text-lg`}
+            />
           </div>
-        )}
-      </div>
+
+          <button
+            type="button"
+            onClick={() => setShowCreateForm(true)}
+            className="w-full h-14 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 text-base font-semibold text-blue-700 hover:bg-blue-50"
+          >
+            <UserPlus size={20} /> Yangi mijoz qo'shish
+          </button>
+
+          {busy ? (
+            <div className="flex items-center justify-center gap-3 py-10 text-base text-gray-500">
+              <span className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              {loading ? 'Yuklanmoqda...' : 'Qidirilmoqda...'}
+            </div>
+          ) : list.length === 0 ? (
+            <div className="text-center py-10">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <User size={30} className="text-gray-400" />
+              </div>
+              <p className="m-0 text-base font-semibold text-gray-800">
+                {searchTerm.trim() ? 'Mijoz topilmadi' : "Hali mijozlar yo'q"}
+              </p>
+              <p className="m-0 mt-1 text-sm text-gray-500">Yuqoridagi tugma orqali yangi mijoz qo'shing</p>
+            </div>
+          ) : (
+            <div>
+              {!searchTerm.trim() && (
+                <p className="m-0 mb-2 text-sm font-semibold text-gray-500">So'nggi mijozlar</p>
+              )}
+              <ul className="m-0 p-0 list-none space-y-2 max-h-[45vh] overflow-y-auto">
+                {list.map(client => {
+                  const active = selectedClient?.id === client.id;
+                  const debt = Number(client.debt_amount) || 0;
+                  return (
+                    <li key={client.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleClientSelect(client)}
+                        className={`w-full flex items-center gap-3 min-h-[64px] p-3 rounded-xl border-2 text-left transition-colors ${
+                          active ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50/50'
+                        }`}
+                      >
+                        <span className="w-11 h-11 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-base font-bold shrink-0">
+                          {(client.first_name || '?').charAt(0).toUpperCase()}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-base font-semibold text-gray-900 truncate">
+                            {client.first_name} {client.last_name}
+                          </span>
+                          {client.phone && (
+                            <span className="flex items-center gap-1 text-sm text-gray-500">
+                              <Phone size={13} /> {client.phone}
+                            </span>
+                          )}
+                        </span>
+                        {debt > 0 && (
+                          <span className="px-2 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-semibold whitespace-nowrap">
+                            Qarz: {formatCurrency(debt)}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => { e.preventDefault(); handleCreateClient(); }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700">Ism <span className="text-red-500">*</span></span>
+              <input
+                autoFocus
+                value={newClient.first_name}
+                onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
+                className={`${inputCls} mt-1.5`}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700">Familiya <span className="text-red-500">*</span></span>
+              <input
+                value={newClient.last_name}
+                onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
+                className={`${inputCls} mt-1.5`}
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Telefon</span>
+            <input
+              type="tel"
+              inputMode="tel"
+              value={newClient.phone}
+              onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+              placeholder="+998 90 123 45 67"
+              className={`${inputCls} mt-1.5`}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Manzil</span>
+            <input
+              value={newClient.address}
+              onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+              className={`${inputCls} mt-1.5`}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Izoh</span>
+            <input
+              value={newClient.notes}
+              onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
+              className={`${inputCls} mt-1.5`}
+            />
+          </label>
+
+          <div className="grid grid-cols-[1fr_2fr] gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="h-14 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              <ArrowLeft size={18} /> Orqaga
+            </button>
+            <button
+              type="submit"
+              disabled={!newClient.first_name.trim() || !newClient.last_name.trim() || createLoading}
+              className="h-14 rounded-xl bg-blue-600 text-white text-lg font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+            >
+              {createLoading ? 'Saqlanmoqda...' : 'Saqlash va tanlash'}
+            </button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 };
 
-export default ClientModal; 
+export default ClientModal;

@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { PAYMENT_METHODS, ERROR_MESSAGES } from '../utils/constants';
+import { formatCurrency } from '../utils/format';
 
 export const usePayment = (total, clientDebt = 0) => {
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS.FULL);
+  // Cash / card / transfer. No default: the cashier must pick it, or every sale
+  // silently lands in the "cash" column of the reports.
+  const [payType, setPayType] = useState(null);
   const [paidAmount, setPaidAmount] = useState(0);
   const [showDebtWarning, setShowDebtWarning] = useState(false);
   const [debtWarning, setDebtWarning] = useState('');
@@ -16,9 +20,9 @@ export const usePayment = (total, clientDebt = 0) => {
     } else if (paymentMethod === PAYMENT_METHODS.DEBT) {
       setPaidAmount(0);
     } else if (paymentMethod === PAYMENT_METHODS.PARTIAL) {
-      // For partial payment, don't auto-set the amount, let user input it
-      // But if current paidAmount is greater than total, reset it
-      if (paidAmount > validTotal) {
+      // Let the cashier type the amount. Coming from "To'liq" the field held the
+      // full total, which partial validation then rejects — start empty instead.
+      if (paidAmount >= validTotal) {
         setPaidAmount(0);
       }
     }
@@ -44,31 +48,25 @@ export const usePayment = (total, clientDebt = 0) => {
 
     // For debt payment - allow it even if client has existing debt
     // The warning should be shown but not block the payment
+    // Existing debt: ask first. The warning's "Davom etish" opens the
+    // confirmation, so returning true here stacked both modals at once.
     if (paymentMethod === PAYMENT_METHODS.DEBT && clientDebt > 0) {
-      // Show warning but don't block the payment
-      setDebtWarning(`${ERROR_MESSAGES.PAYMENT_VALIDATION.CLIENT_DEBT} ${clientDebt.toFixed(2)} UZS. Davom etishni xohlaysizmi?`);
+      setDebtWarning(`${ERROR_MESSAGES.PAYMENT_VALIDATION.CLIENT_DEBT} ${formatCurrency(Number(clientDebt))}. Davom etishni xohlaysizmi?`);
       setShowDebtWarning(true);
-      // Return true to allow the payment to proceed
-      return true;
+      return false;
     }
 
     return true;
   };
 
-  const getBackendPaymentMethod = () => {
-    switch (paymentMethod) {
-      case PAYMENT_METHODS.FULL:
-      case PAYMENT_METHODS.PARTIAL:
-        return PAYMENT_METHODS.CASH;
-      case PAYMENT_METHODS.DEBT:
-        return PAYMENT_METHODS.TRANSFER;
-      default:
-        return PAYMENT_METHODS.CASH;
-    }
-  };
+  // ponytail: a pure debt sale receives no money, so it has no real type; it is
+  // stored as cash. Record the type on the later debt payment if reports need it.
+  const getBackendPaymentMethod = () =>
+    paymentMethod === PAYMENT_METHODS.DEBT ? PAYMENT_METHODS.CASH : (payType || PAYMENT_METHODS.CASH);
 
   const resetPayment = () => {
     setPaymentMethod(PAYMENT_METHODS.FULL);
+    setPayType(null);
     setPaidAmount(0);
     setShowDebtWarning(false);
     setDebtWarning('');
@@ -81,6 +79,8 @@ export const usePayment = (total, clientDebt = 0) => {
     showDebtWarning,
     debtWarning,
     setPaymentMethod,
+    payType,
+    setPayType,
     setPaidAmount,
     setShowDebtWarning,
     setDebtWarning,

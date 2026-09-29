@@ -1,14 +1,5 @@
-/**
- * Reports Components Index
- * 
- * Centralized export for all report components.
- */
-
-export { default as SalesReport } from './SalesReport';
-export { default as FinanceReport } from './FinanceReport';
-
-// Placeholder components for other report types
-export { default as InventoryReport } from './InventoryReport';
-export { default as ClientsReport } from './ClientsReport';
-export { default as PerformanceReport } from './PerformanceReport';
-export { default as CustomReport } from './CustomReport';
+export { default as SalesReport, salesCsv } from './SalesReport';
+export { default as FinanceReport, financeCsv } from './FinanceReport';
+export { default as InventoryReport, inventoryCsv } from './InventoryReport';
+export { default as ClientsReport, clientsCsv } from './ClientsReport';
+export { default as PerformanceReport, performanceCsv } from './PerformanceReport';

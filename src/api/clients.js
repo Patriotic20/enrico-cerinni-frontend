@@ -13,6 +13,12 @@ export const clientsAPI = {
     }
   },
 
+  // Every client with spend, orders, debt and purchase dates (for segmentation)
+  getInsights: async () => {
+    const response = await api.get('/clients/insights');
+    return validateApiResponse(response.data);
+  },
+
   // Get single client by ID
   getClient: async (clientId) => {
     try {

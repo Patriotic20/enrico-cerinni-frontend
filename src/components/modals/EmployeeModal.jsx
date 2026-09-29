@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Users, DollarSign, Calendar, Phone, Mail } from 'lucide-react';
+import { Users, DollarSign, Calendar, Phone, Mail, Target, Percent } from 'lucide-react';
 import { financeAPI } from '../../api/finance';
 import Modal from './Modal';
 import toast from 'react-hot-toast';
@@ -14,6 +14,9 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
     salary: '',
     hire_date: new Date().toISOString().split('T')[0],
     is_active: true,
+    is_seller: true,
+    commission_rate: '',
+    monthly_target: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,6 +33,9 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         salary: employee.salary || '',
         hire_date: employee.hire_date ? new Date(employee.hire_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         is_active: employee.is_active ?? true,
+        is_seller: employee.is_seller ?? true,
+        commission_rate: employee.commission_rate ? String(employee.commission_rate) : '',
+        monthly_target: employee.monthly_target ? String(employee.monthly_target) : '',
       });
     } else {
       setFormData({
@@ -41,6 +47,9 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         salary: '',
         hire_date: new Date().toISOString().split('T')[0],
         is_active: true,
+        is_seller: true,
+        commission_rate: '',
+        monthly_target: '',
       });
     }
     setErrors({});
@@ -73,6 +82,15 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
       newErrors.hire_date = 'Ishga qabul qilish sanasi kiritilishi shart';
     }
 
+    const rate = parseFloat(formData.commission_rate || 0);
+    if (rate < 0 || rate > 100) {
+      newErrors.commission_rate = '0 dan 100 gacha';
+    }
+
+    if (parseFloat(formData.monthly_target || 0) < 0) {
+      newErrors.monthly_target = 'Manfiy bo\'lmasin';
+    }
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'To\'g\'ri email manzilini kiriting';
     }
@@ -101,6 +119,9 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         salary: parseFloat(formData.salary),
         hire_date: new Date(formData.hire_date).toISOString(),
         is_active: formData.is_active,
+        is_seller: formData.is_seller,
+        commission_rate: formData.is_seller ? parseFloat(formData.commission_rate || 0) : 0,
+        monthly_target: formData.is_seller ? parseFloat(formData.monthly_target || 0) : 0,
       };
 
       if (employee) {
@@ -287,6 +308,63 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
             <option value="active">Faol</option>
             <option value="inactive">Faol emas</option>
           </select>
+        </div>
+
+        {/* Seller KPI settings: only sellers are offered at checkout. */}
+        <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-800 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.is_seller}
+              onChange={(e) => handleInputChange('is_seller', e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Sotuvchi
+            <span className="text-xs font-normal text-gray-500">— kassada tanlanadi, KPI hisoblanadi</span>
+          </label>
+          {formData.is_seller && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="commission_rate" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+                  <Percent size={14} className="text-green-500" />
+                  Komissiya, %
+                </label>
+                <input
+                  type="number"
+                  id="commission_rate"
+                  value={formData.commission_rate}
+                  onChange={(e) => handleInputChange('commission_rate', e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
+                    errors.commission_rate ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.commission_rate && <span className="text-red-600 text-xs mt-0.5 block">{errors.commission_rate}</span>}
+              </div>
+              <div>
+                <label htmlFor="monthly_target" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+                  <Target size={14} className="text-orange-500" />
+                  Oylik reja (so'm)
+                </label>
+                <input
+                  type="number"
+                  id="monthly_target"
+                  value={formData.monthly_target}
+                  onChange={(e) => handleInputChange('monthly_target', e.target.value)}
+                  placeholder="0 — rejasiz"
+                  min="0"
+                  step="1000"
+                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
+                    errors.monthly_target ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.monthly_target && <span className="text-red-600 text-xs mt-0.5 block">{errors.monthly_target}</span>}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-200">

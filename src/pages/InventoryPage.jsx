@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Edit, Trash2, Eye, Palette, Ruler } from 'lucide-react';
-import Layout from '../components/layout/Layout';
+import { Plus, Search, Edit, Trash2, Eye, X } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Table from '../components/tables/Table';
 import Button from '../components/ui/Button';
@@ -16,6 +15,8 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { toArray } from '../utils/api';
 import { SEARCH_CONFIG } from '../utils/constants';
 import { cn } from '../utils/cn';
+import { formatNumber } from '../utils/format';
+import { summarizeVariants } from '../utils/stock';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../utils/api';
 
@@ -201,7 +202,7 @@ const useProductFilters = () => {
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(20);
 
   // Typing must not fire one request per keystroke. The page reset is applied
   // in the same update as the new term, so the two together cause a single
@@ -286,113 +287,60 @@ const useProductFilters = () => {
   };
 };
 
-// Inventory header component similar to checkout
-const InventoryHeader = ({ totalProducts, filteredCount, onAddProduct, loading }) => (
-  <Card className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Title Section */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md">
-          <Plus className="text-white" size={20} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 m-0">
-            Inventar boshqaruvi
-          </h1>
-          <p className="text-sm text-gray-600 m-0 hidden sm:block">
-            Mahsulot inventaringizni boshqaring va kuzatib boring
-          </p>
-        </div>
-      </div>
-      
-      {/* Summary Section */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Jami mahsulotlar:</span>
-          <span className="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-            {totalProducts}
-          </span>
-        </div>
-        {filteredCount !== totalProducts && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Ko'rsatilgan:</span>
-            <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-              {filteredCount}
-            </span>
-          </div>
-        )}
-        <Button
-          onClick={onAddProduct}
-          disabled={loading}
-          size="lg"
-          className="whitespace-nowrap"
-        >
-          <Plus size={16} className="mr-1" />
-          Mahsulot qo'shish
-        </Button>
-      </div>
+const summarizeStock = (product) => (
+  product.variants?.length
+    ? summarizeVariants(product.variants)
+    : { total: product.stock_quantity || 0, count: 0, low: 0, out: 0 }
+);
+
+const uniqueBy = (items, key) => {
+  const seen = new Map();
+  for (const item of items) {
+    if (item[key] && !seen.has(item[key])) seen.set(item[key], item);
+  }
+  return [...seen.values()];
+};
+
+const InventoryHeader = ({ totalProducts, shownCount, filtered, onAddProduct, loading }) => (
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 className="text-xl font-bold text-gray-900 m-0">Inventar</h1>
+      <p className="text-sm text-gray-500 m-0">
+        {filtered ? `${shownCount} ta topildi · jami ${totalProducts}` : `${totalProducts} ta mahsulot`}
+      </p>
     </div>
-  </Card>
+    <Button onClick={onAddProduct} disabled={loading} className="whitespace-nowrap">
+      <Plus size={16} className="mr-1" />
+      Mahsulot qo'shish
+    </Button>
+  </div>
 );
 
 // Loading component similar to checkout
 const InventoryLoading = ({ message = "Inventar yuklanmoqda..." }) => (
   <div className="flex items-center justify-center min-h-[400px]">
-    <LoadingSpinner 
-      message={message} 
-      size="lg" 
+    <LoadingSpinner
+      message={message}
+      size="lg"
     />
   </div>
 );
 
-// Skeleton loading for products table
 const ProductsSkeleton = () => (
-  <Card className="overflow-hidden">
-    <div className="animate-pulse">
-      {/* Table header */}
-      <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-        <div className="grid grid-cols-7 gap-4">
-          {['Mahsulot nomi', 'Brend', 'Fasl', 'Narx', 'Zapas', 'SKU', 'Amallar'].map((header, idx) => (
-            <div key={idx} className="h-4 bg-gray-300 rounded"></div>
-          ))}
-        </div>
-      </div>
-      {/* Table rows */}
-      {[...Array(5)].map((_, idx) => (
-        <div key={idx} className="px-6 py-4 border-b border-gray-200">
-          <div className="grid grid-cols-7 gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              <div className="h-4 bg-gray-300 rounded flex-1"></div>
-            </div>
-            <div className="h-6 bg-gray-300 rounded-full w-16"></div>
-            <div className="h-6 bg-gray-300 rounded-full w-12"></div>
-            <div className="h-4 bg-gray-300 rounded w-20"></div>
-            <div className="h-6 bg-gray-300 rounded w-12"></div>
-            <div className="h-4 bg-gray-300 rounded w-16"></div>
-            <div className="flex gap-1">
-              <div className="w-6 h-6 bg-gray-300 rounded"></div>
-              <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            </div>
+  <Card padding="none" className="overflow-hidden">
+    <div className="animate-pulse divide-y divide-gray-100">
+      {[...Array(6)].map((_, idx) => (
+        <div key={idx} className="flex items-center gap-6 px-6 py-4">
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+            <div className="h-3 bg-gray-100 rounded w-1/3" />
           </div>
+          <div className="h-4 bg-gray-200 rounded w-24" />
+          <div className="h-4 bg-gray-200 rounded w-28" />
+          <div className="h-4 bg-gray-200 rounded w-32" />
+          <div className="h-4 bg-gray-200 rounded w-16" />
         </div>
       ))}
-    </div>
-  </Card>
-);
-
-// Skeleton for filters
-const FiltersSkeleton = () => (
-  <Card className="p-4">
-    <div className="animate-pulse">
-      <div className="relative mb-4">
-        <div className="h-10 bg-gray-300 rounded-lg"></div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, idx) => (
-          <div key={idx} className="h-10 bg-gray-300 rounded-lg"></div>
-        ))}
-      </div>
     </div>
   </Card>
 );
@@ -437,6 +385,7 @@ export default function InventoryPage() {
     pageSize,
     queryParams,
     hasActiveFilters,
+    resetFilters,
     handlePageChange,
     handlePageSizeChange
   } = useProductFilters();
@@ -536,191 +485,131 @@ export default function InventoryPage() {
     navigate(`/inventory/${product.id}`);
   }, [navigate]);
 
-  // Row highlighting based on stock status
-  const getRowClassName = useCallback((product) => {
-    const stockStatus = getStockStatus(product);
-    
-    switch (stockStatus) {
-      case 'out-of-stock':
-        return 'bg-red-50 border-l-4 border-red-400';
-      case 'low-stock':
-        return 'bg-yellow-50 border-l-4 border-yellow-400';
-      case 'medium-stock':
-        return 'bg-orange-50 border-l-4 border-orange-400';
-      default:
-        return 'hover:bg-gray-50';
-    }
-  }, []);
-
-  // Helper function to get stock status
-  const getStockStatus = (product) => {
-    let totalStock = 0;
-    if (product.variants && product.variants.length > 0) {
-      totalStock = product.variants.reduce((sum, v) => sum + v.stock_quantity, 0);
-    } else {
-      totalStock = product.stock_quantity || 0;
-    }
-    
-    if (totalStock === 0) return 'out-of-stock';
-    if (totalStock <= 5) return 'low-stock';
-    if (totalStock <= 20) return 'medium-stock';
-    return 'high-stock';
-  };
-
-  // Helper function to get brand colors
-  const getBrandColor = (brandName) => {
-    const colors = {
-      'Nike': 'bg-orange-100 text-orange-800',
-      'Adidas': 'bg-blue-100 text-blue-800',
-      'Puma': 'bg-yellow-100 text-yellow-800',
-      'Reebok': 'bg-red-100 text-red-800',
-      'New Balance': 'bg-green-100 text-green-800',
-    };
-    return colors[brandName] || 'bg-gray-100 text-gray-800';
-  };
+  const getRowClassName = useCallback((product) => (
+    summarizeStock(product).total === 0 ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-gray-50'
+  ), []);
 
   const columns = useMemo(() => [
-    { 
-      key: 'name', 
-      label: 'Mahsulot nomi', 
-      width: '25%',
+    {
+      key: 'name',
+      label: 'Mahsulot',
+      width: '28%',
       render: (value, product) => (
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${
-            getStockStatus(product) === 'out-of-stock' ? 'bg-red-500' :
-            getStockStatus(product) === 'low-stock' ? 'bg-yellow-500' :
-            getStockStatus(product) === 'medium-stock' ? 'bg-orange-500' :
-            'bg-green-500'
-          }`} title={
-            getStockStatus(product) === 'out-of-stock' ? 'Tugagan' :
-            getStockStatus(product) === 'low-stock' ? 'Kam qoldi' :
-            getStockStatus(product) === 'medium-stock' ? 'O\'rtacha' :
-            'Yetarli'
-          }></div>
-          <span className="font-medium text-gray-900 truncate">{value}</span>
+        <div className="min-w-0">
+          <div className="font-medium text-gray-900 truncate">{value}</div>
+          <div className="text-xs text-gray-500 truncate">
+            <span className="font-mono">{product.sku}</span>
+            {product.category_name && <> · {product.category_name}</>}
+          </div>
         </div>
       )
     },
-    { 
-      key: 'brand_name', 
-      label: 'Brend', 
-      width: '12%',
+    {
+      key: 'brand_name',
+      label: 'Brend / Fasl',
+      width: '16%',
       render: (value, product) => (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getBrandColor(value)}`}>
-          {value}
-        </span>
-      )
-    },
-    { 
-      key: 'season_name', 
-      label: 'Fasl', 
-      width: '10%',
-      render: (value, product) => {
-        const seasonColors = {
-          'Bahor': 'bg-green-100 text-green-800',
-          'Yoz': 'bg-yellow-100 text-yellow-800',
-          'Kuz': 'bg-orange-100 text-orange-800',
-          'Qish': 'bg-blue-100 text-blue-800'
-        };
-        return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${seasonColors[value] || 'bg-gray-100 text-gray-800'}`}>
-            {value}
-          </span>
-        );
-      }
-    },
-    { 
-      key: 'price', 
-      label: 'Narx', 
-      width: '15%', 
-      render: (value, product) => {
-        let priceDisplay = '';
-        let priceValue = 0;
-        
-        if (product.variants && product.variants.length > 0) {
-          const minPrice = Math.min(...product.variants.map(v => v.price));
-          const maxPrice = Math.max(...product.variants.map(v => v.price));
-          priceDisplay = minPrice === maxPrice ? `${minPrice}` : `${minPrice}-${maxPrice}`;
-          priceValue = minPrice;
-        } else {
-          priceDisplay = `${value}`;
-          priceValue = value;
-        }
-
-        const priceClass = priceValue > 1000000 ? 'text-purple-600 font-semibold' :
-                          priceValue > 500000 ? 'text-blue-600 font-medium' :
-                          priceValue > 100000 ? 'text-green-600' :
-                          'text-gray-600';
-
-        return <span className={`${priceClass} text-sm`}>{priceDisplay}</span>;
-      }
-    },
-    { 
-      key: 'stock_quantity', 
-      label: 'Zapas', 
-      width: '12%',
-      render: (value, product) => {
-        let totalStock = 0;
-        let stockDisplay = '';
-        
-        if (product.variants && product.variants.length > 0) {
-          totalStock = product.variants.reduce((sum, v) => sum + v.stock_quantity, 0);
-          stockDisplay = `${totalStock} (${product.variants.length})`;
-        } else {
-          totalStock = value || 0;
-          stockDisplay = totalStock.toString();
-        }
-
-        const stockStatus = getStockStatus(product);
-        const stockClass = stockStatus === 'out-of-stock' ? 'bg-red-100 text-red-800 border-red-200' :
-                          stockStatus === 'low-stock' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                          stockStatus === 'medium-stock' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                          'bg-green-100 text-green-800 border-green-200';
-
-        return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${stockClass}`}>
-            {stockDisplay}
-          </span>
-        );
-      }
-    },
-    { 
-      key: 'sku', 
-      label: 'SKU', 
-      width: '14%',
-      render: (value, product) => (
-        <span className="font-mono text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded truncate">
-          {value}
-        </span>
+        <div className="min-w-0">
+          <div className="text-sm text-gray-800 truncate">{value || '—'}</div>
+          <div className="text-xs text-gray-500 truncate">{product.season_name || '—'}</div>
+        </div>
       )
     },
     {
-      key: 'actions',
-      label: 'Amallar',
+      key: 'variants',
+      label: 'Rang / O\'lcham',
+      width: '18%',
+      render: (_, product) => {
+        const variants = product.variants || [];
+        if (variants.length === 0) return <span className="text-xs text-gray-400">Variant yo'q</span>;
+        const colorsList = uniqueBy(variants, 'color_name');
+        const sizesList = uniqueBy(variants, 'size_name').map(v => v.size_name);
+        return (
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-1">
+              {colorsList.slice(0, 6).map(v => (
+                <span
+                  key={v.color_name}
+                  title={v.color_name}
+                  className="w-3.5 h-3.5 rounded-full border border-gray-300"
+                  style={{ backgroundColor: v.color_hex || '#e5e7eb' }}
+                />
+              ))}
+              {colorsList.length > 6 && <span className="text-xs text-gray-500">+{colorsList.length - 6}</span>}
+            </div>
+            <div className="text-xs text-gray-500 truncate" title={sizesList.join(', ')}>
+              {sizesList.join(', ')}
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'price',
+      label: 'Narx (UZS)',
+      width: '16%',
+      render: (value, product) => {
+        const prices = (product.variants || []).map(v => Number(v.price));
+        if (prices.length === 0) prices.push(Number(value) || 0);
+        const min = Math.round(Math.min(...prices));
+        const max = Math.round(Math.max(...prices));
+        return (
+          <span className="text-sm font-medium text-gray-900 whitespace-nowrap tabular-nums">
+            {min === max ? formatNumber(min) : `${formatNumber(min)} – ${formatNumber(max)}`}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'stock_quantity',
+      label: 'Zapas',
       width: '12%',
+      render: (_, product) => {
+        const { total, count, low, out } = summarizeStock(product);
+        let status;
+        if (total === 0) status = <span className="text-red-600">Tugagan</span>;
+        else if (out > 0) status = <span className="text-red-600">{out} ta variant tugagan</span>;
+        else if (low > 0) status = <span className="text-amber-600">{low} ta variant kam</span>;
+        else status = <span className="text-gray-500">{count} variant</span>;
+        return (
+          <div className="whitespace-nowrap">
+            <div className="text-sm font-semibold text-gray-900 tabular-nums">{formatNumber(total)} dona</div>
+            <div className="text-xs">{status}</div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      label: '',
+      width: '10%',
       // Row clicks open the product, so action buttons must stop propagation —
       // otherwise deleting a row also navigates away to that row's detail page.
       render: (_, product) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <button
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors hover:scale-105 transform"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewProduct(product);
-            }}
+            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            onClick={(e) => { e.stopPropagation(); handleViewProduct(product); }}
             title="Ko'rish"
+            aria-label="Ko'rish"
           >
-            <Eye size={14} />
+            <Eye size={16} />
           </button>
           <button
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors hover:scale-105 transform"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteProduct(product.id);
-            }}
-            title="O'chirish"
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={(e) => { e.stopPropagation(); setEditingProduct(product); }}
+            title="Tahrirlash"
+            aria-label="Tahrirlash"
           >
-            <Trash2 size={14} />
+            <Edit size={16} />
+          </button>
+          <button
+            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }}
+            title="O'chirish"
+            aria-label="O'chirish"
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       )
@@ -729,144 +618,78 @@ export default function InventoryPage() {
 
   if (authLoading) {
     return (
-      <Layout>
         <PageLayout>
           <InventoryLoading message="Autentifikatsiya tekshirilmoqda..." />
         </PageLayout>
-      </Layout>
     );
   }
 
   if (error) {
     return (
-      <Layout>
         <PageLayout>
           <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
             <p className="text-red-600 text-center">{error}</p>
             <Button onClick={() => loadProducts(queryParams)}>Qayta urinish</Button>
           </div>
         </PageLayout>
-      </Layout>
     );
   }
 
+  const selectClass = 'px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50';
+
   return (
-    <Layout>
-      <PageLayout 
-        maxWidth="full"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-green-50/30 min-h-screen"
-      >
+      <PageLayout maxWidth="full" spacing="sm">
         <div className="space-y-4">
-          {/* Header */}
           <InventoryHeader
             totalProducts={totalProducts}
-            filteredCount={hasActiveFilters ? pagination.total : totalProducts}
+            shownCount={pagination.total}
+            filtered={hasActiveFilters}
             onAddProduct={() => setShowAddModal(true)}
             loading={productsLoading}
           />
 
-          {/* Search and Filters */}
-          {filtersLoading ? (
-            <FiltersSkeleton />
-          ) : (
-            <Card className="p-4">
-              <div className="relative mb-4">
-                <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          {/* Toolbar: search + filters in one row */}
+          <Card padding="sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <Input
-                  placeholder="Mahsulotlarni qidirish..."
+                  placeholder="Nomi, SKU yoki brend bo'yicha qidirish..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 py-2"
                 />
               </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className={`px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${filtersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={filtersLoading}
+              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className={selectClass} disabled={filtersLoading} aria-label="Kategoriya">
+                <option value="all">Barcha kategoriyalar</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select value={selectedBrand} onChange={(e) => setSelectedBrand(e.target.value)} className={selectClass} disabled={filtersLoading} aria-label="Brend">
+                <option value="all">Barcha brendlar</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <select value={selectedSeason} onChange={(e) => setSelectedSeason(e.target.value)} className={selectClass} disabled={filtersLoading} aria-label="Fasl">
+                <option value="all">Barcha fasllar</option>
+                {seasons.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))} className={selectClass} aria-label="Sahifadagi soni">
+                {[10, 20, 50].map(n => <option key={n} value={n}>{n} ta</option>)}
+              </select>
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 >
-                  <option value="all">{filtersLoading ? 'Yuklanmoqda...' : 'Barcha kategoriyalar'}</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value)}
-                  className={`px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${filtersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={filtersLoading}
-                >
-                  <option value="all">{filtersLoading ? 'Yuklanmoqda...' : 'Barcha brendlar'}</option>
-                  {brands.map(brand => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </option>
-                  ))}
-                </select>
+                  <X size={14} /> Tozalash
+                </button>
+              )}
+            </div>
+          </Card>
 
-                <select
-                  value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value)}
-                  className={`px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${filtersLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={filtersLoading}
-                >
-                  <option value="all">{filtersLoading ? 'Yuklanmoqda...' : 'Barcha fasllar'}</option>
-                  {seasons.map(season => (
-                    <option key={season.id} value={season.id}>
-                      {season.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={pageSize}
-                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value={5}>5 ta</option>
-                  <option value={10}>10 ta</option>
-                  <option value={20}>20 ta</option>
-                  <option value={50}>50 ta</option>
-                </select>
-              </div>
-            </Card>
-          )}
-
-          {/* Stock Status Legend & Pagination Summary */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Zapas holati bo'yicha ranglar:</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Tugagan (0)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Kam (≤5)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">O'rtacha (≤20)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Yetarli ({'>'}20)</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Products Table */}
           {productsLoading ? (
             <ProductsSkeleton />
           ) : (
-            <Card className="overflow-hidden">
+            <Card padding="none" className="overflow-hidden">
               <Table
                 columns={columns}
                 data={products}
@@ -879,6 +702,7 @@ export default function InventoryPage() {
                 totalItems={pagination.total}
                 getRowClassName={getRowClassName}
                 highlightRows={true}
+                emptyMessage={hasActiveFilters ? 'Filtrga mos mahsulot topilmadi' : 'Hali mahsulot qo\'shilmagan'}
               />
             </Card>
           )}
@@ -940,6 +764,5 @@ export default function InventoryPage() {
           />
         </Modal>
       </PageLayout>
-    </Layout>
   );
 } 

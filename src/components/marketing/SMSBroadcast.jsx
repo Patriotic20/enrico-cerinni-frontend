@@ -1,474 +1,154 @@
-import { useState } from 'react';
-import { Smartphone, Send, Users, UserCheck, AlertCircle, MessageSquare, CheckCircle, XCircle, Search } from 'lucide-react';
+import { useMemo } from 'react';
+import { Send, AlertCircle, MessageSquare, RotateCcw, Loader2 } from 'lucide-react';
 import { Button, Card } from '../ui';
+import { ChannelStatus, RecipientPicker } from './shared';
 
-// Predefined SMS templates
-const SMS_TEMPLATES = [
-  {
-    id: 'welcome',
-    name: 'Xush kelibsiz',
-    category: 'Umumiy',
-    message: 'Hurmatli mijoz! Bizning do\'konimizga xush kelibsiz. Siz uchun maxsus takliflarimiz mavjud.',
-    variables: []
-  },
-  {
-    id: 'promotion',
-    name: 'Chegirma e\'loni',
-    category: 'Reklama',
-    message: 'Maxsus taklifimiz! Barcha mahsulotlarga 20% chegirma. Muddati: 3 kun. Do\'konimizga tashrif buyuring!',
-    variables: []
-  },
-  {
-    id: 'new_collection',
-    name: 'Yangi kolleksiya',
-    category: 'Reklama',
-    message: 'Yangi kiyim kolleksiyamiz keldi! Eng so\'nggi moda tendensiyalari va qulay narxlar. Bizni ko\'rib chiqing!',
-    variables: []
-  },
-  {
-    id: 'payment_reminder',
-    name: 'To\'lov eslatmasi',
-    category: 'Moliyaviy',
-    message: 'Hurmatli mijoz! Sizning {amount} UZS miqdoridagi qarzingiz mavjud. Iltimos, imkon bo\'lgan vaqtda to\'lab qo\'ying.',
-    variables: ['amount']
-  },
-  {
-    id: 'debt_warning',
-    name: 'Qarz ogohlantirishi',
-    category: 'Moliyaviy',
-    message: 'Diqqat! Sizning qarzingiz {amount} UZS ni tashkil qiladi. Iltimos, zudlik bilan to\'lab qo\'ying.',
-    variables: ['amount']
-  },
-  {
-    id: 'thank_you',
-    name: 'Rahmat xabari',
-    category: 'Umumiy',
-    message: 'Xaridingiz uchun rahmat! Sizning ishonchingiz bizning eng katta mukofotimiz. Yana ko\'rishguncha!',
-    variables: []
-  },
-  {
-    id: 'birthday',
-    name: 'Tug\'ilgan kun',
-    category: 'Maxsus',
-    message: 'Tug\'ilgan kuningiz muborak! Sizga maxsus 15% chegirma taqdim etamiz. Kod: BIRTHDAY2024',
-    variables: []
-  },
-  {
-    id: 'seasonal_sale',
-    name: 'Mavsumiy sotuv',
-    category: 'Reklama',
-    message: 'Mavsumiy chegirma! Qishki kiyimlarga 30% chegirma. Faqat 5 kun davomida. Shoshiling!',
-    variables: []
-  },
-  {
-    id: 'store_hours',
-    name: 'Ish vaqti',
-    category: 'Ma\'lumot',
-    message: 'Bizning ish vaqtimiz: Dushanba-Shanba 9:00-20:00, Yakshanba 10:00-18:00. Tel: +998901234567',
-    variables: []
-  },
-  {
-    id: 'custom',
-    name: 'Boshqa xabar',
-    category: 'Maxsus',
-    message: '',
-    variables: [],
-    isCustom: true
-  }
-];
+// Eskiz only delivers texts matching a template approved in the my.eskiz.uz
+// cabinet, so the message is always exactly one of those templates.
+const STATUS_LABELS = {
+  service: 'Tasdiqlangan (servis)',
+  reklama: 'Tasdiqlangan (reklama)',
+  moderation: 'Moderatsiyada',
+  inproccess: 'Ko\'rib chiqilmoqda',
+  rejected: 'Rad etilgan',
+};
 
-const TEMPLATE_CATEGORIES = [
-  { id: 'all', name: 'Barchasi' },
-  { id: 'Umumiy', name: 'Umumiy' },
-  { id: 'Reklama', name: 'Reklama' },
-  { id: 'Moliyaviy', name: 'Moliyaviy' },
-  { id: 'Ma\'lumot', name: 'Ma\'lumot' },
-  { id: 'Maxsus', name: 'Maxsus' }
-];
+// Cyrillic/non-GSM text is UCS-2: 70 chars per SMS (67 per part when split).
+const smsParts = (text) => {
+  const unicode = /[^\x00-\x7F]/.test(text);
+  const [single, multi] = unicode ? [70, 67] : [160, 153];
+  return text.length <= single ? 1 : Math.ceil(text.length / multi);
+};
 
 const SMSBroadcast = ({
-  loading,
+  sending,
   clients,
   smsForm,
   setSmsForm,
   handleSMSBroadcast,
   smsStatus,
+  smsTemplates,
   testSmsConnection,
+  openSettings,
 }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [customMessage, setCustomMessage] = useState('');
-  const [templateVariables, setTemplateVariables] = useState({});
-  const [clientSearch, setClientSearch] = useState('');
+  const reachable = useMemo(() => clients.filter(c => c.reachable_by_sms), [clients]);
+  const connected = Boolean(smsStatus?.connected);
+  const selected = smsTemplates.items.find(t => t.id === smsForm.templateId);
+  const edited = selected && smsForm.message !== selected.text;
 
-  const handleTemplateSelect = (template) => {
-    setSelectedTemplate(template);
-    if (template.isCustom) {
-      setSmsForm(prev => ({
-        ...prev,
-        message: customMessage
-      }));
-    } else {
-      // Replace variables in template message
-      let message = template.message;
-      template.variables.forEach(variable => {
-        const value = templateVariables[variable] || `{${variable}}`;
-        message = message.replace(`{${variable}}`, value);
-      });
-      setSmsForm(prev => ({
-        ...prev,
-        message: message
-      }));
-    }
-  };
+  const selectTemplate = (t) => setSmsForm(prev => ({ ...prev, templateId: t.id, message: t.text }));
 
-  const handleCustomMessageChange = (e) => {
-    const value = e.target.value;
-    setCustomMessage(value);
-    if (selectedTemplate?.isCustom) {
-      setSmsForm(prev => ({
-        ...prev,
-        message: value
-      }));
-    }
-  };
-
-  const handleVariableChange = (variable, value) => {
-    const newVariables = { ...templateVariables, [variable]: value };
-    setTemplateVariables(newVariables);
-    
-    if (selectedTemplate && !selectedTemplate.isCustom) {
-      let message = selectedTemplate.message;
-      selectedTemplate.variables.forEach(variable => {
-        const varValue = newVariables[variable] || `{${variable}}`;
-        message = message.replace(`{${variable}}`, varValue);
-      });
-      setSmsForm(prev => ({
-        ...prev,
-        message: message
-      }));
-    }
-  };
-
-  const handleSendToAllChange = (e) => {
-    setSmsForm(prev => ({
-      ...prev,
-      sendToAll: e.target.checked,
-      selectedClients: e.target.checked ? [] : prev.selectedClients
-    }));
-  };
-
-  const handleClientSelection = (clientId) => {
-    setSmsForm(prev => ({
-      ...prev,
-      selectedClients: prev.selectedClients.includes(clientId)
-        ? prev.selectedClients.filter(id => id !== clientId)
-        : [...prev.selectedClients, clientId]
-    }));
-  };
-
-  const handleSelectAllClients = () => {
-    setSmsForm(prev => ({
-      ...prev,
-      selectedClients: clients.map(client => client.id),
-      sendToAll: false
-    }));
-  };
-
-  const handleClearSelection = () => {
-    setSmsForm(prev => ({
-      ...prev,
-      selectedClients: []
-    }));
-  };
-
-  const selectedClientsCount = smsForm.selectedClients.length;
-  const totalClients = clients.length;
-
-  // Filter the client list by name or phone
-  const normalizedSearch = clientSearch.trim().toLowerCase();
-  const filteredClients = normalizedSearch
-    ? clients.filter(client =>
-        `${client.first_name} ${client.last_name}`.toLowerCase().includes(normalizedSearch) ||
-        (client.phone || '').replace(/[\s-]/g, '').includes(normalizedSearch.replace(/[\s-]/g, ''))
-      )
-    : clients;
-
-  // Filter templates by category
-  const filteredTemplates = selectedCategory === 'all' 
-    ? SMS_TEMPLATES 
-    : SMS_TEMPLATES.filter(template => template.category === selectedCategory);
-
-  const smsConnected = Boolean(smsStatus?.connected);
+  const blocker = !connected
+    ? 'SMS provayder ulanmagan'
+    : !selected
+      ? 'Bitta SMS shablonini tanlang'
+      : !smsForm.sendToAll && smsForm.selectedClients.length === 0
+        ? 'Kamida bitta mijozni tanlang yoki "Barcha mijozlarga yuborish" ni belgilang'
+        : null;
 
   return (
     <div className="space-y-4">
-      {/* SMS Provider Connection Status */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-            smsConnected
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}>
-            {smsConnected ? <CheckCircle size={16} /> : <XCircle size={16} />}
-            <span className="text-sm font-medium">
-              {smsStatus == null
-                ? 'Ulanish tekshirilmoqda...'
-                : smsConnected
-                  ? `SMS provayder (Eskiz) ulangan${smsStatus.balance != null ? ` — limit: ${smsStatus.balance} SMS` : ''}`
-                  : 'SMS provayder ulanmagan'}
-            </span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={testSmsConnection}
-            disabled={loading}
-          >
-            Ulanishni tekshirish
-          </Button>
-        </div>
-        {!smsConnected && smsStatus?.error && (
-          <div className="mt-2 flex items-start gap-2 text-xs text-red-600">
-            <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <span>{smsStatus.error}</span>
-          </div>
-        )}
-      </Card>
+      <ChannelStatus
+        status={smsStatus}
+        name="SMS provayder (Eskiz)"
+        connectedText={`Eskiz ulangan — ${smsStatus?.balance != null ? `limit: ${smsStatus.balance} SMS, ` : ''}jo'natuvchi: ${smsStatus?.sender ?? '—'}`}
+        onConfigure={openSettings}
+        onRetry={testSmsConnection}
+      />
 
-      {/* Template Selection */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-3">
+      {connected && (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
             <MessageSquare className="text-blue-600" size={20} />
-            <h3 className="text-lg font-semibold text-gray-900">SMS Shablon tanlash</h3>
+            <h3 className="text-lg font-semibold text-gray-900">SMS shablon (bittasini tanlang)</h3>
           </div>
+          <p className="text-xs text-gray-500">
+            Eskiz faqat my.eskiz.uz kabinetida tasdiqlangan shablon matnini yuboradi. Yangi shablon kabinetda qo'shiladi.
+          </p>
 
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2">
-            {TEMPLATE_CATEGORIES.map(category => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 ${
-                  selectedCategory === category.id
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+          {!smsTemplates.loaded && (
+            <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 size={16} className="animate-spin" /> Shablonlar yuklanmoqda...</div>
+          )}
+          {smsTemplates.error && (
+            <div className="flex items-start gap-2 text-sm text-red-600"><AlertCircle size={16} className="mt-0.5 shrink-0" />{smsTemplates.error}</div>
+          )}
+          {smsTemplates.loaded && !smsTemplates.error && smsTemplates.items.length === 0 && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              Eskiz kabinetida shablon yo'q. Test akkaunt faqat "This is test from Eskiz" matnini yubora oladi.
+            </p>
+          )}
+
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {smsTemplates.items.map(t => (
+              <label
+                key={t.id}
+                className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                  !t.approved ? 'opacity-60 cursor-not-allowed border-gray-200'
+                    : smsForm.templateId === t.id ? 'border-blue-500 bg-blue-50 cursor-pointer'
+                      : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
                 }`}
               >
-                {category.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Template Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-            {filteredTemplates.map(template => (
-              <div
-                key={template.id}
-                onClick={() => handleTemplateSelect(template)}
-                className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                  selectedTemplate?.id === template.id
-                    ? 'border-blue-500 bg-blue-50 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-gray-900 text-sm">{template.name}</h4>
-                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                    {template.category}
+                <input
+                  type="radio"
+                  name="sms-template"
+                  className="mt-1"
+                  disabled={!t.approved}
+                  checked={smsForm.templateId === t.id}
+                  onChange={() => selectTemplate(t)}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">{t.text}</p>
+                  <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded ${t.approved ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {STATUS_LABELS[t.status] || t.status || 'Holati noma\'lum'}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 line-clamp-2">
-                  {template.isCustom ? 'O\'zingizning xabaringizni yozing' : template.message}
-                </p>
-                {template.variables.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {template.variables.map(variable => (
-                      <span key={variable} className="text-xs px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded">
-                        {`{${variable}}`}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Template Variables */}
-      {selectedTemplate && selectedTemplate.variables.length > 0 && (
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">O'zgaruvchilar</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {selectedTemplate.variables.map(variable => (
-              <div key={variable}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {variable === 'amount' ? 'Miqdor (UZS)' : variable}
-                </label>
-                <input
-                  type={variable === 'amount' ? 'number' : 'text'}
-                  value={templateVariables[variable] || ''}
-                  onChange={(e) => handleVariableChange(variable, e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder={`${variable} qiymatini kiriting`}
-                />
-              </div>
+              </label>
             ))}
           </div>
         </Card>
       )}
 
-      {/* Custom Message Input */}
-      {selectedTemplate?.isCustom && (
-        <Card className="p-4">
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Maxsus xabar matni</label>
-            <div className="relative">
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
-                value={customMessage}
-                onChange={handleCustomMessageChange}
-                placeholder="O'zingizning xabar matnini kiriting..."
-                rows={4}
-                maxLength={160}
-              />
-              <div className="absolute bottom-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded border">
-                {customMessage.length}/160 belgi
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Message Preview */}
-      {selectedTemplate && smsForm.message && (
-        <Card className="p-4 bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">Xabar ko'rinishi</h3>
-          <div className="p-3 bg-white border border-gray-200 rounded-lg">
-            <p className="text-sm text-gray-800">{smsForm.message}</p>
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            Uzunligi: {smsForm.message.length}/160 belgi
-          </div>
-        </Card>
-      )}
-
-      {/* Recipients Selection */}
-      <Card className="p-4">
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">Qabul qiluvchilar</label>
-          
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={smsForm.sendToAll}
-                onChange={handleSendToAllChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-900">Barcha mijozlarga yuborish ({totalClients} ta)</span>
-            </label>
-          </div>
-
-          {!smsForm.sendToAll && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Tanlangan mijozlar: {selectedClientsCount} ta</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAllClients}
-                    disabled={selectedClientsCount === totalClients}
-                  >
-                    Hammasini tanlash
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearSelection}
-                    disabled={selectedClientsCount === 0}
-                  >
-                    Tozalash
-                  </Button>
-                </div>
-              </div>
-
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  placeholder="Mijozni ismi yoki telefon raqami bo'yicha qidirish..."
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-              </div>
-
-              <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-2">
-                {filteredClients.length === 0 && (
-                  <p className="p-3 text-sm text-gray-500 text-center">Hech narsa topilmadi</p>
-                )}
-                {filteredClients.map(client => (
-                  <label key={client.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-200">
-                    <input
-                      type="checkbox"
-                      checked={smsForm.selectedClients.includes(client.id)}
-                      onChange={() => handleClientSelection(client.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <span className="block text-sm font-medium text-gray-900">
-                        {client.first_name} {client.last_name}
-                      </span>
-                      <span className="block text-xs text-gray-500">{client.phone}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Send Button */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <Users size={16} />
-              <span>Jami mijozlar: {totalClients} ta</span>
-            </div>
-            {!smsForm.sendToAll && (
-              <div className="flex items-center gap-2">
-                <UserCheck size={16} />
-                <span>Tanlangan: {selectedClientsCount} ta</span>
-              </div>
+      {selected && (
+        <Card className="p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">Xabar matni</label>
+            {edited && (
+              <button type="button" onClick={() => selectTemplate(selected)} className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                <RotateCcw size={12} /> Shablonga qaytarish
+              </button>
             )}
           </div>
-          <Button
-            onClick={handleSMSBroadcast}
-            disabled={loading || (!smsForm.sendToAll && selectedClientsCount === 0) || !smsForm.message.trim()}
-            loading={loading}
-            className="flex items-center gap-2"
-          >
-            <Send size={20} />
-            <span>SMS Yuborish</span>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            value={smsForm.message}
+            onChange={(e) => setSmsForm(prev => ({ ...prev, message: e.target.value }))}
+            rows={4}
+          />
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>{edited ? "Faqat o'zgaruvchi qismlarni o'zgartiring — boshqa matnni Eskiz rad etadi" : ''}</span>
+            <span>{smsForm.message.length} belgi · {smsParts(smsForm.message)} SMS</span>
+          </div>
+        </Card>
+      )}
+
+      {connected && (
+        <RecipientPicker
+          clients={reachable}
+          form={smsForm}
+          setForm={setSmsForm}
+          subtitle={reachable.length < clients.length ? `${clients.length - reachable.length} ta mijozda telefon raqami yo'q` : null}
+        />
+      )}
+
+      <Card className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className={`flex items-center gap-2 text-sm ${blocker ? 'text-amber-600' : 'text-gray-600'}`}>
+            {blocker ? <><AlertCircle size={14} />{blocker}</> : `Qabul qiluvchilar: ${smsForm.sendToAll ? reachable.length : smsForm.selectedClients.length} ta`}
+          </span>
+          <Button onClick={handleSMSBroadcast} disabled={sending || Boolean(blocker)} loading={sending} className="flex items-center gap-2">
+            <Send size={18} /> SMS yuborish
           </Button>
         </div>
-        {(!smsForm.message.trim() || (!smsForm.sendToAll && selectedClientsCount === 0)) && (
-          <div className="mt-3 flex items-start gap-2 text-xs text-amber-600">
-            <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <span>
-              {!smsForm.message.trim()
-                ? "Xabar matni tanlanmagan — yuqoridan shablonni tanlang yoki \"Boshqa xabar\" orqali o'z matningizni yozing"
-                : 'Kamida bitta mijozni tanlang yoki "Barcha mijozlarga yuborish" ni belgilang'}
-            </span>
-          </div>
-        )}
       </Card>
     </div>
   );

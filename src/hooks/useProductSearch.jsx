@@ -66,10 +66,13 @@ export const useProductSearch = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, searchProducts, getRecentProducts]);
 
+  // Back to the default list. Emptying the results left a blank grid when the
+  // term was already '' (the effect above never re-fired); reloading also
+  // picks up stock changed by the sale that just finished.
   const clearSearch = useCallback(() => {
     setSearchTerm('');
-    setSearchResults([]);
-  }, []);
+    getRecentProducts();
+  }, [getRecentProducts]);
 
   return {
     searchTerm,

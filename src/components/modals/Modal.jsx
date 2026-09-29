@@ -75,7 +75,8 @@ const Modal = ({
     }
     previousFocusRef.current = document.activeElement;
     document.body.style.overflow = 'hidden';
-    if (modalRef.current) {
+    // Respect autoFocus on a child: React focuses it before this effect runs.
+    if (modalRef.current && !modalRef.current.contains(document.activeElement)) {
       modalRef.current.focus();
     }
     return () => {
@@ -132,7 +133,7 @@ const Modal = ({
             {title && (
               <h2 
                 id="modal-title" 
-                className="text-base font-semibold text-gray-900 truncate"
+                className="text-lg font-semibold text-gray-900 truncate"
               >
                 {title}
               </h2>
@@ -143,7 +144,7 @@ const Modal = ({
                 type="button"
                 onClick={onClose}
                 className={cn(
-                  'flex items-center justify-center p-1',
+                  'flex items-center justify-center w-10 h-10 -mr-2',
                   'text-gray-400 hover:text-gray-600',
                   'hover:bg-gray-100 rounded-md',
                   'transition-colors duration-200',
@@ -152,7 +153,7 @@ const Modal = ({
                 )}
                 aria-label="Close modal"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>

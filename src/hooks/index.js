@@ -10,7 +10,6 @@ export { useCheckout } from './useCheckout';
 export { useCart } from './useCart';
 export { useProductSearch } from './useProductSearch';
 export { usePayment } from './usePayment';
-export { useClientManagement } from './useClientManagement';
 export { useFinance } from './useFinance';
 export { default as useSales } from './useSales';
 export { useProductManagement } from './useProductManagement';

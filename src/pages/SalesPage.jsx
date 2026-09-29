@@ -1,122 +1,56 @@
-import { useEffect } from 'react';
-import { RefreshCw, DollarSign, Filter, Download, TrendingUp } from 'lucide-react';
-import Layout from '../components/layout/Layout';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, Download, Plus, Receipt, Wallet, CheckCircle2, AlertCircle, Calculator, SearchX } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import { Button, LoadingSpinner } from '../components/ui';
-import { 
-  SalesFilters, 
-  SalesPagination, 
-  SaleDetailsModal, 
+import {
+  SalesFilters,
+  SalesPagination,
+  SaleDetailsModal,
   SalesTable
 } from '../components/sales';
 import SaleDebtPaymentModal from '../components/modals/SaleDebtPaymentModal';
 import { useAuth } from '../contexts/AuthContext';
 import useSales from '../hooks/useSales';
+import { employeesAPI } from '../api';
 import { useDebounce } from '../hooks/useDebounce';
 import { cn } from '../utils/cn';
 
-// Sales header component
-const SalesHeader = ({ stats, showFilters, setShowFilters, onRefresh, onExport, loading, formatCurrency }) => (
-  <Card className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      {/* Title Section */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-md">
-          <TrendingUp className="text-white" size={20} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 m-0">
-            Sotuvlar
-          </h1>
-          <p className="text-sm text-gray-600 m-0 hidden sm:block">
-            Sotuvlar tarixi va statistikalar
-          </p>
-        </div>
+const Kpi = ({ icon: Icon, label, value, hint, tone = 'gray' }) => {
+  const tones = {
+    gray: 'bg-gray-100 text-gray-600',
+    green: 'bg-green-100 text-green-600',
+    blue: 'bg-blue-100 text-blue-600',
+    red: 'bg-red-100 text-red-600',
+  };
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+        <span className={cn('w-7 h-7 rounded-md flex items-center justify-center', tones[tone])}>
+          <Icon size={15} />
+        </span>
+        {label}
       </div>
-      
-      {/* Stats Section */}
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4">
-          <div className="text-center">
-            <p className="text-xs text-gray-600 m-0">Jami:</p>
-            <p className="text-sm font-semibold text-gray-900 m-0">{stats.total_sales}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-gray-600 m-0">Tushum:</p>
-            <p className="text-sm font-semibold text-green-600 m-0">{formatCurrency(stats.total_revenue)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-gray-600 m-0">O'rtacha:</p>
-            <p className="text-sm font-semibold text-blue-600 m-0">{formatCurrency(stats.avg_order_value)}</p>
-          </div>
-        </div>
-        
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={showFilters ? "default" : "secondary"}
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="whitespace-nowrap"
-          >
-            <Filter size={14} className="mr-1" />
-            Filtrlar
-          </Button>
-          
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onExport}
-            className="whitespace-nowrap"
-          >
-            <Download size={14} className="mr-1" />
-            Eksport
-          </Button>
-          
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onRefresh}
-            disabled={loading}
-            className="px-2"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ''} />
-          </Button>
-        </div>
-      </div>
-    </div>
-  </Card>
-);
-
-// Loading component
-const SalesLoading = () => (
-  <div className="flex items-center justify-center min-h-[400px]">
-    <LoadingSpinner 
-      message="Autentifikatsiya tekshirilmoqda..." 
-      size="lg" 
-    />
-  </div>
-);
+      <div className="mt-2 text-lg font-semibold text-gray-900 tabular-nums truncate" title={String(value)}>{value}</div>
+      {hint && <div className="text-xs text-gray-500 mt-0.5">{hint}</div>}
+    </Card>
+  );
+};
 
 export default function SalesPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const {
-    // State
     sales,
     loading,
     selectedSale,
     showSaleModal,
-    showFilters,
     showDebtPaymentModal,
     selectedDebtSale,
     stats,
     filters,
     pagination,
-    
-    // Actions
     setShowSaleModal,
-    setShowFilters,
     setShowDebtPaymentModal,
     setSelectedDebtSale,
     loadSales,
@@ -125,23 +59,20 @@ export default function SalesPage() {
     handleCancelSale,
     handlePayDebt,
     handleFilterChange,
+    setDateRange,
     handlePageChange,
     handlePageSizeChange,
     clearFilters,
     exportReport,
-    
-    // Utilities
     formatDate,
+    formatTime,
     formatCurrency,
     getStatusBadge
   } = useSales();
 
-  // Check authentication after loading is complete
   useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated()) {
-        window.location.href = '/login';
-      }
+    if (!authLoading && !isAuthenticated()) {
+      window.location.href = '/login';
     }
   }, [authLoading, user]);
 
@@ -149,12 +80,22 @@ export default function SalesPage() {
   // stops, not two API calls per keystroke. Page changes stay instant.
   const debouncedFilters = useDebounce(filters, 400);
 
+  const [sellers, setSellers] = useState([]);
+  useEffect(() => {
+    employeesAPI.getSellers().then(r => setSellers(r.data || [])).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!authLoading && isAuthenticated()) {
       loadSales();
+    }
+  }, [debouncedFilters, pagination.page, pagination.limit, authLoading]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated()) {
       loadStats();
     }
-  }, [debouncedFilters, pagination.page, authLoading]);
+  }, [debouncedFilters, authLoading]);
 
   const handlePayDebtClick = (sale) => {
     setSelectedDebtSale(sale);
@@ -176,112 +117,119 @@ export default function SalesPage() {
     loadStats();
   };
 
-  // Show loading during authentication check
   if (authLoading) {
     return (
-      <Layout>
-        <PageLayout>
-          <SalesLoading />
-        </PageLayout>
-      </Layout>
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner message="Autentifikatsiya tekshirilmoqda..." size="lg" />
+        </div>
+      </PageLayout>
     );
   }
 
+  const paidPct = stats.total_revenue > 0 ? Math.round((stats.paid_amount / stats.total_revenue) * 100) : 0;
+
   return (
-    <Layout>
-      <PageLayout 
-        maxWidth="full"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-green-50/30 min-h-screen"
-      >
-        <div className="space-y-4">
-          {/* Header */}
-          <SalesHeader
-            stats={stats}
-            showFilters={showFilters}
-            setShowFilters={setShowFilters}
-            onRefresh={handleRefresh}
-            onExport={exportReport}
-            loading={loading}
-            formatCurrency={formatCurrency}
+    <PageLayout maxWidth="full" spacing="sm" className="bg-gray-50 min-h-screen">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 m-0">Sotuvlar</h1>
+            <p className="text-sm text-gray-500 m-0">Cheklar tarixi, to'lovlar va qarzlar</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={loading} title="Yangilash" className="px-2">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={exportReport} disabled={!pagination.total}>
+              <Download size={14} className="mr-1" /> CSV
+            </Button>
+            <Link to="/checkout">
+              <Button size="sm">
+                <Plus size={14} className="mr-1" /> Yangi sotuv
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* KPIs — computed server-side over exactly the filters below */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <Kpi icon={Receipt} label="Sotuvlar" value={stats.total_sales}
+            hint={stats.cancelled_sales ? `${stats.cancelled_sales} ta bekor qilingan` : 'Bekor qilinganlarsiz'} />
+          <Kpi icon={Wallet} label="Tushum" tone="blue" value={formatCurrency(stats.total_revenue)} />
+          <Kpi icon={CheckCircle2} label="To'langan" tone="green" value={formatCurrency(stats.paid_amount)}
+            hint={`Tushumning ${paidPct}%`} />
+          <Kpi icon={AlertCircle} label="Qarz qoldig'i" tone="red" value={formatCurrency(stats.outstanding)}
+            hint={`${stats.debt_sales} ta sotuvda`} />
+          <Kpi icon={Calculator} label="O'rtacha chek" value={formatCurrency(stats.avg_order_value)} />
+        </div>
+
+        {/* Filters + table */}
+        <Card className="p-4">
+          <SalesFilters
+            filters={filters}
+            sellers={sellers}
+            onFilterChange={handleFilterChange}
+            onDateRange={setDateRange}
+            onClearFilters={clearFilters}
           />
 
-          {/* Filters */}
-          {showFilters && (
-            <Card>
-              <SalesFilters
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClearFilters={clearFilters}
-                showFilters={showFilters}
-              />
-            </Card>
-          )}
-
-          {/* Main Content */}
-          <Card className="min-h-[600px]">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
+          <div className="mt-4 min-h-[400px]">
+            {loading && sales.length === 0 ? (
+              <div className="flex items-center justify-center py-16">
                 <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." size="lg" />
               </div>
             ) : sales.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <DollarSign size={48} className="text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Hech qanday sotuv topilmadi</h3>
-                <p className="text-sm text-gray-500 mb-4">Tanlangan filtrlarda sotuvlar mavjud emas</p>
-                <Button onClick={clearFilters} size="sm">
-                  Filtrlarni tozalash
-                </Button>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <SearchX size={40} className="text-gray-300 mb-3" />
+                <h3 className="text-base font-medium text-gray-900 mb-1">Sotuv topilmadi</h3>
+                <p className="text-sm text-gray-500 mb-4">Tanlangan davr yoki filtrlarda sotuv yo'q</p>
+                <Button onClick={clearFilters} size="sm" variant="secondary">Barcha sotuvlarni ko'rsatish</Button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Pagination */}
-                <div className="px-6 py-4 border-b border-gray-200">
+              <div className={cn('transition-opacity', loading && 'opacity-50 pointer-events-none')}>
+                <SalesTable
+                  sales={sales}
+                  onViewSale={handleViewSale}
+                  onCancelSale={handleCancelSale}
+                  onPayDebt={handlePayDebtClick}
+                  formatTime={formatTime}
+                  formatCurrency={formatCurrency}
+                  getStatusBadge={getStatusBadge}
+                />
+                <div className="pt-4 mt-2 border-t border-gray-100">
                   <SalesPagination
                     pagination={pagination}
                     onPageChange={handlePageChange}
                     onPageSizeChange={handlePageSizeChange}
                   />
                 </div>
-
-                {/* Sales Table */}
-                <div className="px-6 pb-6">
-                  <SalesTable
-                    sales={sales}
-                    onViewSale={handleViewSale}
-                    onCancelSale={handleCancelSale}
-                    onPayDebt={handlePayDebtClick}
-                    formatDate={formatDate}
-                    formatCurrency={formatCurrency}
-                    getStatusBadge={getStatusBadge}
-                  />
-                </div>
               </div>
             )}
-          </Card>
+          </div>
+        </Card>
 
-          {/* Modals */}
-          <SaleDetailsModal
-            selectedSale={selectedSale}
-            showSaleModal={showSaleModal}
-            onClose={() => setShowSaleModal(false)}
-            formatDate={formatDate}
-            formatCurrency={formatCurrency}
-            getStatusBadge={getStatusBadge}
-          />
+        <SaleDetailsModal
+          selectedSale={selectedSale}
+          showSaleModal={showSaleModal}
+          onClose={() => setShowSaleModal(false)}
+          formatDate={formatDate}
+          formatCurrency={formatCurrency}
+          getStatusBadge={getStatusBadge}
+        />
 
-          <SaleDebtPaymentModal
-            sale={selectedDebtSale}
-            isOpen={showDebtPaymentModal}
-            onClose={() => {
-              setShowDebtPaymentModal(false);
-              setSelectedDebtSale(null);
-            }}
-            onPayDebt={handleDebtPayment}
-            formatCurrency={formatCurrency}
-          />
-        </div>
-      </PageLayout>
-    </Layout>
+        <SaleDebtPaymentModal
+          sale={selectedDebtSale}
+          isOpen={showDebtPaymentModal}
+          onClose={() => {
+            setShowDebtPaymentModal(false);
+            setSelectedDebtSale(null);
+          }}
+          onPayDebt={handleDebtPayment}
+          formatCurrency={formatCurrency}
+        />
+      </div>
+    </PageLayout>
   );
-} 
+}

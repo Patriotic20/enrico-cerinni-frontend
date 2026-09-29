@@ -1,89 +1,149 @@
-import { Minus, Plus, Trash2 } from 'lucide-react';
-import Input from '../forms/Input';
+import { useState } from 'react';
+import { Minus, Plus, Trash2, ShoppingCart, ScanBarcode, Pencil } from 'lucide-react';
+import { formatCurrency } from '../../utils/format';
+import { cn } from '../../utils/cn';
+import PriceKeypadModal from './PriceKeypadModal';
 
 export default function CartItems({
   cart,
   updateQuantity,
   updatePrice,
-  removeFromCart
+  removeFromCart,
+  clearCart
 }) {
+  const [editingId, setEditingId] = useState(null);
+  const editing = cart.find(i => i.id === editingId) || null;
+  const units = cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
+
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200/50 flex-1 overflow-hidden flex flex-col hover:shadow-xl transition-all duration-300" data-no-autofocus>
-      <div className="flex items-center gap-2 mb-2 shrink-0">
-        <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded flex items-center justify-center">
-          <span className="text-white text-xs font-bold">{cart.length}</span>
-        </div>
-        <h3 className="m-0 text-sm font-semibold text-gray-900">Savat</h3>
+    <div className="flex-1 min-h-[320px] lg:min-h-0 flex flex-col" data-no-autofocus>
+      <div className="flex items-center justify-between gap-3 px-4 h-14 shrink-0 border-b border-gray-100">
+        <h3 className="m-0 text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <ShoppingCart size={22} className="text-gray-500" />
+          Savat
+          {cart.length > 0 && (
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+              {units} dona
+            </span>
+          )}
+        </h3>
+        {cart.length > 0 && clearCart && (
+          <button
+            type="button"
+            onClick={() => window.confirm("Savatni tozalaysizmi?") && clearCart()}
+            className="h-10 px-3 flex items-center gap-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
+          >
+            <Trash2 size={16} /> Tozalash
+          </button>
+        )}
       </div>
+
       {cart.length === 0 ? (
-        <div className="text-center py-6">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <span className="text-xl">🛒</span>
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+            <ScanBarcode size={30} className="text-blue-500" />
           </div>
-          <p className="text-gray-500 text-xs">Savatda mahsulot yo'q</p>
-          <p className="text-xs text-gray-400 mt-0.5">Mahsulot qidirish orqali qo'shing</p>
+          <p className="m-0 text-lg font-semibold text-gray-800">Savat bo'sh</p>
+          <p className="m-0 mt-1 text-sm text-gray-500 max-w-xs">
+            Shtrix-kodni skanerlang yoki chapdan mahsulotni bosing
+          </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 pr-1">
-          {cart.map(item => (
-            <div key={item.id} className="flex items-center gap-2 p-2 bg-gradient-to-br from-white to-gray-50 rounded border border-gray-200 transition-all duration-200 relative overflow-hidden hover:from-gray-50 hover:to-gray-100 hover:-translate-y-[1px] hover:shadow-sm group">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="m-0 text-xs font-semibold text-slate-800 leading-tight truncate flex-1">{item.name}</h4>
-                  {(item.color_name || item.size_name) && (
-                    <div className="flex gap-1 flex-shrink-0">
+        <ul className="m-0 p-0 list-none divide-y divide-gray-100 flex-1 min-h-0 overflow-y-auto">
+          {cart.map(item => {
+            const price = Number(item.price) || 0;
+            const base = Number(item.basePrice ?? item.price) || 0;
+            const changed = price !== base;
+            return (
+              <li key={item.id} className="px-4 py-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="m-0 text-base font-semibold text-gray-900 leading-snug truncate">{item.name}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
                       {item.color_name && (
-                        <span className="px-1 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider bg-amber-100 text-amber-800">
+                        <span className="inline-flex items-center gap-1.5 h-6 pl-1 pr-2 rounded-full border border-gray-200 text-sm text-gray-700">
+                          <span
+                            className="w-4 h-4 rounded-full border border-black/10"
+                            style={{ backgroundColor: item.color_hex || '#e5e7eb' }}
+                          />
                           {item.color_name}
                         </span>
                       )}
                       {item.size_name && (
-                        <span className="px-1 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center h-6 px-2 rounded-full bg-gray-900 text-white text-sm font-bold">
                           {item.size_name}
                         </span>
                       )}
                     </div>
-                  )}
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="O'chirish"
+                    className="-mr-1 w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 active:bg-red-100"
+                    onClick={() => removeFromCart(item.id)}
+                  >
+                    <Trash2 size={20} />
+                  </button>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    value={isNaN(item.price) ? '' : item.price}
-                    onChange={(e) => updatePrice(item.id, e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="w-[70px] text-xs px-1 py-0.5 border border-gray-300 rounded text-right font-medium text-gray-700"
-                  />
-                  <span className="text-xs text-gray-500 font-medium">UZS</span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(item.id)}
+                    className={cn(
+                      'flex-1 min-w-0 h-12 px-3 flex items-center justify-between gap-2 rounded-xl border-2 text-left transition-colors active:scale-[0.98]',
+                      changed ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100' : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50/50'
+                    )}
+                  >
+                    <span className="min-w-0">
+                      {changed && (
+                        <span className="block text-xs text-gray-400 line-through tabular-nums leading-none">
+                          {formatCurrency(base)}
+                        </span>
+                      )}
+                      <span className="block text-base font-semibold text-gray-900 tabular-nums leading-tight truncate">
+                        {formatCurrency(price)}
+                      </span>
+                    </span>
+                    <Pencil size={16} className="text-gray-400 shrink-0" />
+                  </button>
+
+                  <div className="flex items-center h-12 w-[136px] shrink-0 rounded-xl border-2 border-gray-200 overflow-hidden">
+                    <button
+                      type="button"
+                      aria-label="Kamaytirish"
+                      className="w-11 h-full flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 disabled:opacity-30"
+                      disabled={item.quantity <= 1}
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    >
+                      <Minus size={20} />
+                    </button>
+                    <span className="flex-1 text-center text-lg font-bold text-gray-900 tabular-nums">{item.quantity}</span>
+                    <button
+                      type="button"
+                      aria-label="Ko'paytirish"
+                      className="w-11 h-full flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+
+                  <span className="w-[132px] shrink-0 text-right text-lg font-bold text-gray-900 whitespace-nowrap tabular-nums">
+                    {formatCurrency(price * (Number(item.quantity) || 0))}
+                  </span>
                 </div>
-              </div>
-              <div className="flex items-center gap-0.5 bg-white/80 p-0.5 rounded border border-gray-200 flex-shrink-0">
-                <button
-                  className="bg-white border border-gray-300 rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-400 active:scale-95 min-w-[18px] h-[18px] flex items-center justify-center"
-                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                >
-                  <Minus size={12} />
-                </button>
-                <span className="font-semibold text-slate-800 min-w-[20px] text-center text-xs bg-white px-0.5 rounded border border-gray-200">
-                  {item.quantity}
-                </span>
-                <button
-                  className="bg-white border border-gray-300 rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-400 active:scale-95 min-w-[18px] h-[18px] flex items-center justify-center"
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                >
-                  <Plus size={12} />
-                </button>
-                <button
-                  className="bg-white border border-red-200 rounded p-0.5 text-red-600 hover:bg-red-50 hover:border-red-400 active:scale-95 min-w-[18px] h-[18px] flex items-center justify-center"
-                  onClick={() => removeFromCart(item.id)}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
+
+      <PriceKeypadModal
+        item={editing}
+        onClose={() => setEditingId(null)}
+        onSave={(p) => updatePrice(editingId, p)}
+      />
     </div>
   );
-} 
+}

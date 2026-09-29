@@ -8,16 +8,18 @@
  */
 
 import { useEffect, Suspense } from 'react';
-import { DollarSign } from 'lucide-react';
 import logger from '../utils/logger';
-import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import ClientModal from '../components/modals/ClientModal';
-import { LoadingSpinner, Card, Button } from '../components/ui';
+import { LoadingSpinner } from '../components/ui';
+import { CheckCircle2, Loader2 } from 'lucide-react';
+import { PAYMENT_METHODS } from '../utils/constants';
+import { formatCurrency } from '../utils/format';
 import {
   ProductSearch,
   CartItems,
   ClientSection,
+  SellerSection,
   PaymentSection,
   PaymentConfirmationModal,
   DebtWarningModal,
@@ -25,73 +27,85 @@ import {
 } from '../components/checkout';
 import { useCheckout } from '../hooks/useCheckout';
 import { useAuth } from '../contexts/AuthContext';
-import { cn } from '../utils/cn';
 
-// Checkout header component
-const CheckoutHeader = ({ cart, total, onCheckout, loading }) => (
-  <Card className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Title Section */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-          <DollarSign className="text-white" size={20} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 m-0">
-            Sotuv tizimi
-          </h1>
-          <p className="text-sm text-gray-600 m-0 hidden sm:block">
-            Mahsulotlarni qo'shing va to'lovni amalga oshiring
-          </p>
-        </div>
+// Right-hand "ticket": who (seller, client) -> what (cart) -> how (payment) -> pay.
+// Fixed to the viewport on desktop so the cart and the pay button never scroll away.
+const TicketPanel = ({ checkout }) => {
+  const total = Number(checkout.total) || 0;
+  const owing = [PAYMENT_METHODS.PARTIAL, PAYMENT_METHODS.DEBT].includes(checkout.paymentMethod) && total > 0;
+  const needType = checkout.cart.length > 0 && checkout.paymentMethod !== PAYMENT_METHODS.DEBT && !checkout.payType;
+  const disabled = checkout.cart.length === 0 || checkout.loading || needType;
+  return (
+    <aside className="lg:w-[500px] xl:w-[540px] shrink-0 flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="p-4 space-y-3 border-b border-gray-100">
+        <SellerSection
+          sellers={checkout.sellers}
+          sellerId={checkout.sellerId}
+          onSelect={checkout.selectSeller}
+          error={checkout.sellerError}
+        />
+        <ClientSection
+          selectedClient={checkout.selectedClient}
+          clientDebt={checkout.clientDebt}
+          setShowClientModal={checkout.setShowClientModal}
+          setSelectedClient={checkout.setSelectedClient}
+        />
       </div>
-      
-      {/* Summary Section */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Mahsulotlar:</span>
-          <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-            {cart.length}
-          </span>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600 m-0">Jami summa:</p>
-          <p className="text-lg font-bold text-green-600 m-0">
-            {(Number(total) || 0).toLocaleString()} UZS
-          </p>
-        </div>
-        <Button
-          onClick={onCheckout}
-          disabled={cart.length === 0 || loading}
-          loading={loading}
-          size="lg"
-          className="whitespace-nowrap"
+
+      <CartItems
+        cart={checkout.cart}
+        updateQuantity={checkout.updateQuantity}
+        updatePrice={checkout.updatePrice}
+        removeFromCart={checkout.removeFromCart}
+        clearCart={checkout.clearCart}
+      />
+
+      <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+        <PaymentSection
+          paymentMethod={checkout.paymentMethod}
+          setPaymentMethod={checkout.setPaymentMethod}
+          payType={checkout.payType}
+          setPayType={checkout.setPayType}
+          paidAmount={checkout.paidAmount}
+          setPaidAmount={checkout.setPaidAmount}
+          total={checkout.total}
+          remainingAmount={checkout.remainingAmount}
+          clientDebt={checkout.clientDebt}
+        />
+        {owing && (
+          <div className="flex justify-between text-base">
+            <span className="text-gray-600">Hozir: <b className="text-gray-900 tabular-nums">{formatCurrency(Number(checkout.paidAmount) || 0)}</b></span>
+            <span className="text-gray-600">Qarz: <b className="text-red-600 tabular-nums">{formatCurrency(Number(checkout.remainingAmount) || 0)}</b></span>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={checkout.handleCheckout}
+          disabled={disabled}
+          className="w-full h-[72px] px-5 flex items-center justify-between gap-3 rounded-xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800 active:scale-[0.99] transition disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed"
         >
-          Sotuvni amalga oshirish
-        </Button>
+          <span className="flex items-center gap-2.5 text-lg font-bold">
+            {checkout.loading
+              ? <Loader2 size={24} className="animate-spin" />
+              : <CheckCircle2 size={24} />}
+            {needType ? "To'lov turini tanlang" : "To'lash"}
+          </span>
+          <span className="text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(total)}</span>
+        </button>
       </div>
-    </div>
-  </Card>
-);
+    </aside>
+  );
+};
 
 // Main checkout content component
 const CheckoutContent = () => {
   const checkout = useCheckout();
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <CheckoutHeader
-        cart={checkout.cart}
-        total={checkout.total}
-        onCheckout={checkout.handleCheckout}
-        loading={checkout.loading}
-      />
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 min-h-[600px]">
-        {/* Left Column - Product Search & Cart */}
-        <div className="space-y-4">
+    <>
+      {/* Layout pads 1.5rem top/bottom on desktop, header is mobile-only. */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:h-[calc(100dvh-3rem)]">
+        <section className="flex-1 min-w-0 min-h-0 flex flex-col">
           <ProductSearch
             searchTerm={checkout.searchTerm}
             setSearchTerm={checkout.setSearchTerm}
@@ -103,34 +117,8 @@ const CheckoutContent = () => {
             addManyToCart={checkout.addManyToCart}
             onBarcodeScan={checkout.handleBarcodeScan}
           />
-
-          <CartItems
-            cart={checkout.cart}
-            updateQuantity={checkout.updateQuantity}
-            updatePrice={checkout.updatePrice}
-            removeFromCart={checkout.removeFromCart}
-          />
-        </div>
-
-        {/* Right Column - Client & Payment */}
-        <div className="space-y-4">
-          <ClientSection
-            selectedClient={checkout.selectedClient}
-            clientDebt={checkout.clientDebt}
-            setShowClientModal={checkout.setShowClientModal}
-            setSelectedClient={checkout.setSelectedClient}
-          />
-
-          <PaymentSection
-            paymentMethod={checkout.paymentMethod}
-            setPaymentMethod={checkout.setPaymentMethod}
-            paidAmount={checkout.paidAmount}
-            setPaidAmount={checkout.setPaidAmount}
-            total={checkout.total}
-            remainingAmount={checkout.remainingAmount}
-            clientDebt={checkout.clientDebt}
-          />
-        </div>
+        </section>
+        <TicketPanel checkout={checkout} />
       </div>
 
       {/* Modals */}
@@ -146,9 +134,12 @@ const CheckoutContent = () => {
         setPaymentModal={checkout.setPaymentModal}
         total={checkout.total}
         paymentMethod={checkout.paymentMethod}
+        payType={checkout.payType}
         paidAmount={checkout.paidAmount}
         remainingAmount={checkout.remainingAmount}
         selectedClient={checkout.selectedClient}
+        sellerName={checkout.sellers.find(s => s.id === checkout.sellerId)?.name}
+        itemCount={checkout.cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0)}
         clientDebt={checkout.clientDebt}
         loading={checkout.loading}
         processPayment={checkout.processPayment}
@@ -159,25 +150,23 @@ const CheckoutContent = () => {
         setShowDebtWarning={checkout.setShowDebtWarning}
         debtWarning={checkout.debtWarning}
         onContinue={checkout.handleCheckoutContinue}
-        paymentMethod={checkout.paymentMethod}
       />
 
       <ReceiptModal
         showReceipt={checkout.showReceipt}
-        setShowReceipt={checkout.setShowReceipt}
         currentSale={checkout.currentSale}
         cart={checkout.cart}
         selectedClient={checkout.selectedClient}
         clientName={checkout.clientName}
         clientPhone={checkout.clientPhone}
-        subtotal={checkout.subtotal}
         total={checkout.total}
         paymentMethod={checkout.paymentMethod}
+        payType={checkout.payType}
         paidAmount={checkout.paidAmount}
         remainingAmount={checkout.remainingAmount}
         resetForm={checkout.resetForm}
       />
-    </div>
+    </>
   );
 };
 
@@ -214,25 +203,16 @@ export default function CheckoutPage() {
   // Show loading during authentication check
   if (authLoading) {
     return (
-      <Layout>
         <PageLayout>
           <CheckoutLoading />
         </PageLayout>
-      </Layout>
     );
   }
 
   return (
-    <Layout>
-      <PageLayout 
-        maxWidth="full"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen"
-      >
-        <Suspense fallback={<CheckoutLoading />}>
-          <CheckoutContent />
-        </Suspense>
-      </PageLayout>
-    </Layout>
+      // No PageLayout here: the POS fills the viewport, its padding/title would force a page scroll.
+      <Suspense fallback={<CheckoutLoading />}>
+        <CheckoutContent />
+      </Suspense>
   );
 } 

@@ -16,7 +16,10 @@ export const useCart = () => {
       );
     }
 
-    return [...items, { ...product, price: parseFloat(product.price) || 0, quantity: 1 }];
+    // UZS has no usable fractions; whole numbers keep the cart and keypad clean.
+    // basePrice lets the cashier see and restore the list price after a discount.
+    const price = Math.round(parseFloat(product.price) || 0);
+    return [...items, { ...product, price, basePrice: price, quantity: 1 }];
   };
 
   // Functional updates are required here: adding several products in one go
@@ -47,7 +50,7 @@ export const useCart = () => {
   const updatePrice = useCallback((productId, newPrice) => {
     setCart(cart.map(item =>
       item.id === productId
-        ? { ...item, price: parseFloat(newPrice) || 0 }
+        ? { ...item, price: Math.max(0, Math.round(parseFloat(newPrice) || 0)) }
         : item
     ));
   }, [cart]);

@@ -53,6 +53,11 @@ export default function SaleDetailsModal({
               <p className="text-gray-900 font-medium">{selectedSale.client_name}</p>
             </div>
           )}
+          {selectedSale.seller_name && (
+            <p className="mt-3 text-sm text-gray-700 m-0">
+              Sotuvchi: <span className="font-medium text-gray-900">{selectedSale.seller_name}</span>
+            </p>
+          )}
         </Card>
 
         {/* Payment Status Section */}

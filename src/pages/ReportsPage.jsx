@@ -1,383 +1,147 @@
-/**
- * Reports Page
- * 
- * Comprehensive reporting dashboard with different report types and analytics.
- * Features sidebar navigation for different report categories.
- * 
- * @page
- */
-
-import { useState, useEffect, Suspense } from 'react';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  Package, 
-  DollarSign, 
-  Calendar,
-  Download,
-  FileText,
-  PieChart,
-  Activity
-} from 'lucide-react';
-import Layout from '../components/layout/Layout';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { TrendingUp, DollarSign, Package, Users, Activity, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
-import { Card, Button, LoadingSpinner } from '../components/ui';
+import { Button, LoadingSpinner } from '../components/ui';
+import { reportsAPI } from '../api';
+import { ymd } from '../hooks/useSales';
+import { downloadCsv } from '../utils/csv';
 import { cn } from '../utils/cn';
 import {
-  SalesReport,
-  FinanceReport,
-  InventoryReport,
-  ClientsReport,
-  PerformanceReport,
-  CustomReport
+  SalesReport, salesCsv,
+  FinanceReport, financeCsv,
+  InventoryReport, inventoryCsv,
+  ClientsReport, clientsCsv,
+  PerformanceReport, performanceCsv,
 } from '../components/reports';
 
-// Report types configuration
-const REPORT_TYPES = [
-  {
-    id: 'sales',
-    title: 'Sotuv hisobotlari',
-    description: 'Sotuv statistikalari va tendensiyalar',
-    icon: TrendingUp,
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200'
-  },
-  {
-    id: 'finance',
-    title: 'Moliyaviy hisobotlar',
-    description: 'Daromad, xarajat va foyda tahlili',
-    icon: DollarSign,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200'
-  },
-  {
-    id: 'inventory',
-    title: 'Inventar hisobotlari',
-    description: 'Mahsulot zaxirasi va harakati',
-    icon: Package,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200'
-  },
-  {
-    id: 'clients',
-    title: 'Mijoz hisobotlari',
-    description: 'Mijozlar va ularning faoliyati',
-    icon: Users,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200'
-  },
-  {
-    id: 'performance',
-    title: 'Ishlash ko\'rsatkichlari',
-    description: 'Umumiy biznes ko\'rsatkichlari',
-    icon: Activity,
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
-    borderColor: 'border-indigo-200'
-  },
-  {
-    id: 'custom',
-    title: 'Maxsus hisobotlar',
-    description: 'Moslashtirilgan hisobotlar',
-    icon: FileText,
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-200'
-  }
+const REPORTS = [
+  { id: 'sales', title: 'Sotuvlar', icon: TrendingUp, Component: SalesReport, csv: salesCsv, load: reportsAPI.getSalesReport },
+  { id: 'finance', title: 'Moliya', icon: DollarSign, Component: FinanceReport, csv: financeCsv, load: reportsAPI.getFinanceReport },
+  { id: 'inventory', title: 'Inventar', icon: Package, Component: InventoryReport, csv: inventoryCsv, load: reportsAPI.getInventoryReport },
+  { id: 'clients', title: 'Mijozlar', icon: Users, Component: ClientsReport, csv: clientsCsv, load: reportsAPI.getClientsReport },
+  { id: 'performance', title: "O'sish", icon: Activity, Component: PerformanceReport, csv: performanceCsv, load: reportsAPI.getPerformanceReport },
 ];
 
-// Sidebar component
-const ReportsSidebar = ({ selectedReport, onReportSelect }) => {
-  return (
-    <Card className="h-fit sticky top-6">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <BarChart3 className="text-blue-600" size={20} />
-          Hisobot turlari
-        </h2>
-        <p className="text-sm text-gray-600 mt-1">
-          Kerakli hisobot turini tanlang
-        </p>
-      </div>
-      
-      <div className="p-2">
-        {REPORT_TYPES.map((report) => {
-          const Icon = report.icon;
-          const isSelected = selectedReport === report.id;
-          
-          return (
-            <button
-              key={report.id}
-              onClick={() => onReportSelect(report.id)}
-              className={cn(
-                'w-full text-left p-3 rounded-lg transition-all duration-200 mb-1',
-                'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
-                isSelected 
-                  ? `${report.bgColor} ${report.borderColor} border shadow-sm` 
-                  : 'hover:bg-gray-50'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center',
-                  isSelected ? report.bgColor : 'bg-gray-100'
-                )}>
-                  <Icon 
-                    size={16} 
-                    className={isSelected ? report.color : 'text-gray-600'} 
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className={cn(
-                    'text-sm font-medium',
-                    isSelected ? report.color : 'text-gray-900'
-                  )}>
-                    {report.title}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {report.description}
-                  </div>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </Card>
-  );
+const presets = () => {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const today = ymd(now);
+  return [
+    { label: '7 kun', start: ymd(new Date(y, m, d - 6)), end: today },
+    { label: '30 kun', start: ymd(new Date(y, m, d - 29)), end: today },
+    { label: 'Bu oy', start: ymd(new Date(y, m, 1)), end: today },
+    { label: "O'tgan oy", start: ymd(new Date(y, m - 1, 1)), end: ymd(new Date(y, m, 0)) },
+    { label: 'Bu yil', start: ymd(new Date(y, 0, 1)), end: today },
+  ];
 };
 
-// Report header component
-const ReportHeader = ({ reportType }) => {
-  const report = REPORT_TYPES.find(r => r.id === reportType);
-  if (!report) return null;
-  
-  const Icon = report.icon;
-  
-  return (
-    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            'w-12 h-12 rounded-lg flex items-center justify-center shadow-md',
-            'bg-gradient-to-r from-blue-500 to-blue-600'
-          )}>
-            <Icon className="text-white" size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 m-0">
-              {report.title}
-            </h1>
-            <p className="text-sm text-gray-600 m-0">
-              {report.description}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Calendar size={16} />
-            Davr tanlash
-          </Button>
-          <Button
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Download size={16} />
-            Yuklab olish
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-};
+const dateInput = 'h-8 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-800 focus:outline-none focus:border-blue-500';
 
-// Report content component that renders specific report based on type
-const ReportContent = ({ reportType }) => {
-  const [reportData, setReportData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  // Default to the last 30 days. A hardcoded calendar range goes stale and
-  // every report silently comes back empty once the date has passed.
-  const [dateRange, setDateRange] = useState(() => {
-    const toISODate = (date) => date.toISOString().slice(0, 10);
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-
-    return { start: toISODate(start), end: toISODate(end) };
-  });
-
-  // Load report data when type changes
-  useEffect(() => {
-    const loadReportData = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const { reportsAPI } = await import('../api');
-
-        const filters = {
-          start_date: dateRange.start,
-          end_date: dateRange.end
-        };
-
-        let response;
-        switch (reportType) {
-          case 'sales':
-            response = await reportsAPI.getSalesReport(filters);
-            break;
-          case 'finance':
-            response = await reportsAPI.getFinanceReport(filters);
-            break;
-          case 'inventory':
-            response = await reportsAPI.getInventoryReport();
-            break;
-          case 'clients':
-            response = await reportsAPI.getClientsReport(filters);
-            break;
-          case 'performance':
-            response = await reportsAPI.getPerformanceReport(filters);
-            break;
-          default:
-            response = await reportsAPI.getSalesReport(filters);
-        }
-
-        if (response.success) {
-          setReportData(response.data);
-        } else {
-          setError(response.message || 'Failed to load report');
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load report');
-        console.error('Report loading error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadReportData();
-  }, [reportType, dateRange]);
-
-  const handleDateRangeChange = (newRange) => {
-    setDateRange(newRange);
-  };
-
-  const commonProps = {
-    data: reportData,
-    dateRange,
-    onDateRangeChange: handleDateRangeChange,
-    loading,
-    error
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner message="Hisobot yuklanmoqda..." size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="p-6">
-        <div className="text-center">
-          <div className="text-red-600 mb-2">
-            <Activity size={48} className="mx-auto mb-2" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Hisobotni yuklashda xatolik
-          </h3>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>
-            Qayta urinish
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
-  switch (reportType) {
-    case 'sales':
-      return <SalesReport {...commonProps} />;
-    case 'finance':
-      return <FinanceReport {...commonProps} />;
-    case 'inventory':
-      return <InventoryReport {...commonProps} />;
-    case 'clients':
-      return <ClientsReport {...commonProps} />;
-    case 'performance':
-      return <PerformanceReport {...commonProps} />;
-    case 'custom':
-      return <CustomReport {...commonProps} />;
-    default:
-      return <SalesReport {...commonProps} />;
-  }
-};
-
-// Main reports content component
-const ReportsContent = () => {
-  const [selectedReport, setSelectedReport] = useState('sales');
-
-  return (
-    <div className="space-y-6">
-      {/* Report Header */}
-      <ReportHeader reportType={selectedReport} />
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 min-h-[600px]">
-        {/* Left Sidebar */}
-        <ReportsSidebar
-          selectedReport={selectedReport}
-          onReportSelect={setSelectedReport}
-        />
-
-        {/* Right Content */}
-        <div className="min-w-0">
-          <ReportContent reportType={selectedReport} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Loading component
-const ReportsLoading = () => (
-  <div className="flex items-center justify-center min-h-[400px]">
-    <LoadingSpinner 
-      message="Hisobotlar yuklanmoqda..." 
-      size="lg" 
-    />
-  </div>
-);
-
-/**
- * Main Reports Page Component
- */
 export default function ReportsPage() {
+  const [params, setParams] = useSearchParams();
+  const report = REPORTS.find(r => r.id === params.get('tab')) || REPORTS[0];
+  const [range, setRange] = useState(() => presets()[2]); // Bu oy
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    report.load({ start_date: range.start, end_date: range.end })
+      .then(res => {
+        if (cancelled) return;
+        if (res.success) setData(res.data);
+        else setError(res.message || 'Hisobotni yuklab bo\'lmadi');
+      })
+      .catch(err => !cancelled && setError(err.message || 'Hisobotni yuklab bo\'lmadi'))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [report, range.start, range.end, reloadKey]);
+
+  const selectTab = (id) => {
+    setData(null); // another report's data has a different shape
+    setParams({ tab: id }, { replace: true });
+  };
+
+  const exportCsv = () => {
+    const { header, rows } = report.csv(data);
+    downloadCsv(`hisobot-${report.id}-${range.start}_${range.end}.csv`, header, rows);
+  };
+
+  const { Component } = report;
+
   return (
-    <Layout>
-      <PageLayout 
-        title="Hisobotlar"
-        subtitle="Biznes tahlili va hisobotlar bilan tanishing"
-        maxWidth="full"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen"
-      >
-        <Suspense fallback={<ReportsLoading />}>
-          <ReportsContent />
-        </Suspense>
-      </PageLayout>
-    </Layout>
+    <PageLayout maxWidth="full" spacing="sm" className="bg-gray-50 min-h-screen">
+      <div className="space-y-4">
+        {/* Header: title, period, export */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 m-0">Hisobotlar</h1>
+            <p className="text-sm text-gray-500 m-0">Biznes ko'rsatkichlari tanlangan davr uchun</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+              {presets().map(p => {
+                const active = range.start === p.start && range.end === p.end;
+                return (
+                  <button key={p.label} type="button" onClick={() => setRange(p)}
+                    className={cn('px-3 py-1.5 text-sm rounded-md transition-colors',
+                      active ? 'bg-white text-gray-900 font-medium shadow-sm' : 'text-gray-600 hover:text-gray-900')}>
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <input type="date" value={range.start} max={range.end} aria-label="Boshlanish sanasi" className={dateInput}
+                onChange={(e) => e.target.value && setRange(r => ({ ...r, start: e.target.value }))} />
+              —
+              <input type="date" value={range.end} min={range.start} aria-label="Tugash sanasi" className={dateInput}
+                onChange={(e) => e.target.value && setRange(r => ({ ...r, end: e.target.value }))} />
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setReloadKey(k => k + 1)} disabled={loading} title="Yangilash" className="px-2">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button size="sm" onClick={exportCsv} disabled={!data || loading}>
+              <Download size={14} className="mr-1" /> CSV
+            </Button>
+          </div>
+        </div>
+
+        {/* Report tabs */}
+        <div className="flex gap-1 border-b border-gray-200 overflow-x-auto" role="tablist">
+          {REPORTS.map(({ id, title, icon: Icon }) => {
+            const active = report.id === id;
+            return (
+              <button key={id} role="tab" aria-selected={active} onClick={() => selectTab(id)}
+                className={cn('flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors',
+                  active ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-600 hover:text-gray-900')}>
+                <Icon size={16} /> {title}
+              </button>
+            );
+          })}
+        </div>
+
+        {error ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <span className="flex items-center gap-2"><AlertCircle size={16} /> {error}</span>
+            <button onClick={() => setReloadKey(k => k + 1)} className="font-medium hover:underline">Qayta urinish</button>
+          </div>
+        ) : !data ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <LoadingSpinner message="Hisobot yuklanmoqda..." size="lg" />
+          </div>
+        ) : (
+          // Keep the previous numbers on screen while a new period loads.
+          <div className={cn('transition-opacity', loading && 'opacity-50 pointer-events-none')}>
+            <Component data={data} />
+          </div>
+        )}
+      </div>
+    </PageLayout>
   );
 }

@@ -1,53 +1,45 @@
 import DashboardStats from './DashboardStats';
 import RecentTransactions from './RecentTransactions';
-import MonthlyOverview from './MonthlyOverview';
+import TopProducts from './TopProducts';
 import CashflowChart from './CashflowChart';
 import ProfitChart from './ProfitChart';
 import SalesPerformanceChart from './SalesPerformanceChart';
 import ExpenseBreakdownChart from './ExpenseBreakdownChart';
 
+// One-screen owner view: KPI row + 3x2 grid of compact cards on xl screens.
 export default function DashboardContent({ stats, recentTransactions, chartData = {}, selectedPeriods = {}, chartLoading = {}, onPeriodChange }) {
   return (
-    <div className="space-y-6">
-      {/* Enhanced Statistics */}
+    <div className="space-y-3">
       <DashboardStats stats={stats} />
-      
-      {/* Main Charts Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <CashflowChart 
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+        <CashflowChart
           data={chartData.cashflow}
           selectedPeriod={selectedPeriods.cashflow}
           loading={chartLoading.cashflow}
           onPeriodChange={(period) => onPeriodChange('cashflow', period)}
         />
-        <ProfitChart 
+        <ProfitChart
           data={chartData.profit}
           selectedPeriod={selectedPeriods.profit}
           loading={chartLoading.profit}
           onPeriodChange={(period) => onPeriodChange('profit', period)}
         />
-      </div>
-      
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <SalesPerformanceChart 
+        <SalesPerformanceChart
           data={chartData.salesPerformance}
           selectedPeriod={selectedPeriods.salesPerformance}
           loading={chartLoading.salesPerformance}
           onPeriodChange={(period) => onPeriodChange('salesPerformance', period)}
         />
-        <ExpenseBreakdownChart 
+        <ExpenseBreakdownChart
           data={chartData.expenseBreakdown}
           selectedPeriod={selectedPeriods.expenseBreakdown}
           loading={chartLoading.expenseBreakdown}
           onPeriodChange={(period) => onPeriodChange('expenseBreakdown', period)}
         />
-      </div>
-      
-      {/* Secondary Information */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
         <RecentTransactions transactions={recentTransactions} />
-        <MonthlyOverview stats={stats} />
+        <TopProducts products={stats.topProducts} />
       </div>
     </div>
   );
-} 
+}

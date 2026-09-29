@@ -122,7 +122,8 @@ export default function useProductDetail(productId) {
         // Update the variant in the local state
         setVariants(prevVariants => 
           prevVariants.map(variant => 
-            variant.id === variantId ? response.data : variant
+            // Merge: the update response omits display fields like color_hex.
+            variant.id === variantId ? { ...variant, ...response.data } : variant
           )
         );
         return { success: true };

@@ -128,8 +128,10 @@ const Button = forwardRef(({
       
       {/* Button content */}
       {children && (
+        // inline-flex keeps icons passed as children on the same line as the
+        // label; preflight makes svg display:block, which stacked them above it.
         <span className={cn(
-          'truncate',
+          'inline-flex items-center gap-1.5 min-w-0 whitespace-nowrap',
           loading && 'opacity-70'
         )}>
           {children}

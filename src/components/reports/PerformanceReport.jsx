@@ -1,149 +1,69 @@
-/**
- * Performance Report Component
- *
- * Period-over-period business performance: growth, margin trend, inventory
- * turnover and customer retention.
- */
-
-import { TrendingUp, TrendingDown, Minus, Repeat, Users, Percent } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
-} from 'recharts';
-import { Card } from '../ui';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
+import { cn } from '../../utils/cn';
+import { toNumber, shortMoney, AXIS, GRID, BLUE, Kpi, KpiRow, Panel, Empty, ChartTooltip, Th, Td, SimpleTable } from './shared';
 
-const toNumber = (value) => {
-  const parsed = parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
+const signed = (v, unit = '%') => `${v > 0 ? '+' : ''}${v.toFixed(1)}${unit}`;
+const tone = (v) => (v > 0 ? 'good' : v < 0 ? 'bad' : undefined);
 
-// Every metric is a period-over-period comparison, so the sign carries meaning.
-const DeltaCard = ({ title, value, suffix = '%', hint, icon: Icon }) => {
-  const numeric = toNumber(value);
-  const Arrow = numeric > 0 ? TrendingUp : numeric < 0 ? TrendingDown : Minus;
-  const tone = numeric > 0 ? 'text-green-600' : numeric < 0 ? 'text-red-600' : 'text-gray-500';
+export const performanceCsv = (data) => ({
+  header: ['Oy', 'Tushum', "Tushum o'sishi %", "Sotuvlar o'sishi %"],
+  rows: (data?.monthly_performance || []).map(r => [r.month, r.revenue, r.revenue_growth, r.sales_growth]),
+});
 
-  return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <div className={`flex items-center gap-1 mt-1 ${tone}`}>
-            <Arrow size={18} />
-            <p className="text-2xl font-bold">
-              {numeric > 0 ? '+' : ''}{numeric.toFixed(2)}{suffix}
-            </p>
-          </div>
-          {hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
-        </div>
-        {Icon && <Icon className="text-gray-400" size={22} />}
-      </div>
-    </Card>
-  );
-};
-
-const PlainCard = ({ title, value, hint, icon: Icon }) => (
-  <Card className="p-6">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        {hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
-      </div>
-      {Icon && <Icon className="text-gray-400" size={22} />}
-    </div>
-  </Card>
+const Delta = ({ value }) => (
+  <span className={cn('inline-flex items-center gap-1', value > 0 ? 'text-green-700' : value < 0 ? 'text-red-600' : 'text-gray-500')}>
+    {value > 0 ? <TrendingUp size={13} /> : value < 0 ? <TrendingDown size={13} /> : null}
+    {signed(value)}
+  </span>
 );
 
-const PerformanceReport = ({ data = {} }) => {
-  const metrics = data?.metrics || {};
-  const monthly = (data?.monthly_performance || []).map((row) => ({
-    month: row.month,
-    revenue: toNumber(row.revenue),
-    revenue_growth: toNumber(row.revenue_growth),
-    sales_growth: toNumber(row.sales_growth),
-  }));
-
-  const GrowthTooltip = ({ active, payload, label }) => {
-    if (!active || !payload || payload.length === 0) return null;
-    const row = payload[0].payload;
-    return (
-      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="text-sm font-medium text-gray-900 mb-1">{label}</p>
-        <p className="text-sm text-gray-700">{formatCurrency(row.revenue)}</p>
-        <p className="text-sm text-blue-600">Daromad o'sishi: {row.revenue_growth}%</p>
-        <p className="text-sm text-green-600">Sotuv o'sishi: {row.sales_growth}%</p>
-      </div>
-    );
-  };
+const PerformanceReport = ({ data }) => {
+  const m = data?.metrics || {};
+  const monthly = (data?.monthly_performance || []).map(r => ({ ...r, revenue: toNumber(r.revenue) }));
+  const n = (k) => toNumber(m[k]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <DeltaCard
-          title="Daromad o'sishi"
-          value={metrics.revenue_growth_rate}
-          hint="Oldingi shu uzunlikdagi davrga nisbatan"
-          icon={TrendingUp}
-        />
-        <DeltaCard
-          title="Sotuvlar o'sishi"
-          value={metrics.sales_growth_rate}
-          hint="Sotuvlar soni bo'yicha"
-          icon={TrendingUp}
-        />
-        <DeltaCard
-          title="Foyda marjasi o'zgarishi"
-          value={metrics.profit_margin_trend}
-          suffix=" p.p."
-          hint="Foiz punktlarida"
-          icon={Percent}
-        />
-        <PlainCard
-          title="Zaxira aylanishi"
-          value={toNumber(metrics.inventory_turnover).toFixed(2)}
-          hint="Sotilgan tovar tannarxi / ombor qiymati"
-          icon={Repeat}
-        />
-        <PlainCard
-          title="Mijozlarni ushlab qolish"
-          value={`${toNumber(metrics.customer_retention_rate).toFixed(2)}%`}
-          hint="Oldingi davr xaridorlaridan qaytganlari"
-          icon={Users}
-        />
-      </div>
+    <div className="space-y-4">
+      <p className="text-xs text-gray-500 m-0">Tanlangan davr xuddi shu uzunlikdagi oldingi davr bilan solishtiriladi.</p>
+      <KpiRow>
+        <Kpi label="Tushum o'sishi" value={signed(n('revenue_growth_rate'))} tone={tone(n('revenue_growth_rate'))} />
+        <Kpi label="Sotuvlar soni o'sishi" value={signed(n('sales_growth_rate'))} tone={tone(n('sales_growth_rate'))} />
+        <Kpi label="Foyda marjasi o'zgarishi" value={signed(n('profit_margin_trend'), ' p.p.')} tone={tone(n('profit_margin_trend'))} />
+        <Kpi label="Qaytgan mijozlar" value={`${n('customer_retention_rate').toFixed(0)}%`} hint="Oldingi davr xaridorlaridan" />
+        <Kpi label="Zaxira aylanishi" value={`${n('inventory_turnover').toFixed(2)}×`} hint="Sotilgan tannarx / zaxira tannarxi" />
+      </KpiRow>
 
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900">Oylik o'sish dinamikasi</h3>
-        <p className="text-sm text-gray-600 mt-1 mb-4">
-          Har bir oy oldingi oyga nisbatan, oxirgi 6 oy
-        </p>
-
-        {/* ResponsiveContainer sizes against its parent, so it sits directly
-            inside the element that carries the height. */}
-        <div className="h-72">
-          {monthly.length === 0 ? (
-            <div className="h-full bg-gray-50 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500">Ma'lumot yo'q</p>
+      <Panel title="Oylik tushum" subtitle="Oxirgi 6 oy va oldingi oyga nisbatan o'zgarish">
+        {monthly.length ? (
+          <>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid {...GRID} />
+                  <XAxis dataKey="month" {...AXIS} />
+                  <YAxis {...AXIS} width={48} tickFormatter={shortMoney} />
+                  <Tooltip cursor={{ fill: '#f3f4f6' }} content={<ChartTooltip format={(v) => formatCurrency(v)} />} />
+                  <Bar dataKey="revenue" name="Tushum" fill={BLUE} radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthly} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#6b7280' }}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <Tooltip content={<GrowthTooltip />} />
-                <Legend />
-                <Bar dataKey="revenue_growth" name="Daromad o'sishi" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="sales_growth" name="Sotuv o'sishi" fill="#10b981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </Card>
+            <div className="mt-3">
+              <SimpleTable head={<><Th>Oy</Th><Th right>Tushum</Th><Th right>Tushum o'sishi</Th><Th right>Sotuvlar o'sishi</Th></>}>
+                {[...monthly].reverse().map(r => (
+                  <tr key={r.month}>
+                    <Td className="text-gray-700">{r.month}</Td>
+                    <Td right>{formatCurrency(r.revenue)}</Td>
+                    <Td right><Delta value={toNumber(r.revenue_growth)} /></Td>
+                    <Td right><Delta value={toNumber(r.sales_growth)} /></Td>
+                  </tr>
+                ))}
+              </SimpleTable>
+            </div>
+          </>
+        ) : <Empty />}
+      </Panel>
     </div>
   );
 };

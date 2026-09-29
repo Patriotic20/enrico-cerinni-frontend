@@ -8,7 +8,6 @@
  */
 
 import { Suspense } from 'react';
-import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { DashboardContent } from '../components/dashboard';
@@ -82,10 +81,8 @@ const DashboardPageContent = () => {
  */
 export default function DashboardPage() {
   return (
-    <Layout>
       <PageLayout 
         title="Boshqaruv paneli"
-        subtitle="Xush kelibsiz! Mana do'koningizning umumiy ko'rinishi."
         maxWidth="full"
         spacing="sm"
         className="bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen"
@@ -94,6 +91,5 @@ export default function DashboardPage() {
           <DashboardPageContent />
         </Suspense>
       </PageLayout>
-    </Layout>
   );
 } 

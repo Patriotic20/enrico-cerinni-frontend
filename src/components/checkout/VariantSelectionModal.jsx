@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import Modal from '../modals/Modal';
-import Button from '../ui/Button';
+import { formatCurrency } from '../../utils/format';
 
 /**
  * Variant picker for the checkout flow.
@@ -38,6 +38,10 @@ export default function VariantSelectionModal({
       if (scannedVariant) {
         setSelectedIds([scannedVariant.id]);
       }
+    } else if (isOpen && product?.variants) {
+      // Only one in stock — nothing to choose, just confirm.
+      const inStock = product.variants.filter(v => v.stock_quantity > 0);
+      if (inStock.length === 1) setSelectedIds([inStock[0].id]);
     } else if (!isOpen) {
       setSelectedIds([]);
     }
@@ -89,6 +93,7 @@ export default function VariantSelectionModal({
         stock_quantity: variant.stock_quantity,
         sku: variant.sku,
         color_name: variant.color_name,
+        color_hex: variant.color_hex,
         size_name: variant.size_name,
         variant_id: variant.id
       }));
@@ -108,98 +113,104 @@ export default function VariantSelectionModal({
       colorGroups[colorName].push(variant);
     });
 
+    // Sizes in order (48, 50, 52) so the eye finds the right one fast.
+    Object.values(colorGroups).forEach(group =>
+      group.sort((a, b) => String(a.size_name).localeCompare(String(b.size_name), undefined, { numeric: true }))
+    );
     return colorGroups;
   };
+
+  const selectedTotal = availableVariants
+    .filter(variant => selectedIds.includes(variant.id))
+    .reduce((sum, variant) => sum + (Number(variant.price) || 0), 0);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`${product?.name} - Variant tanlash`}
-      size="lg"
+      title={product?.name}
+      size="xl"
     >
-      <div className="space-y-4">
-        {/* Product Info */}
-        <div className="text-center bg-gray-50 rounded-lg p-2 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{product?.name}</h3>
-          <p className="text-sm text-gray-600">
-            {product?.brand_name} • {product?.season_name}
-          </p>
-        </div>
-
-        {/* Selection summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            {selectedIds.length > 0
-              ? `${selectedIds.length} ta variant tanlandi`
-              : 'Bir nechta variantni tanlash mumkin'}
+      <div className="space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="m-0 text-base text-gray-600">
+            {[product?.brand_name, product?.season_name].filter(Boolean).join(' · ') || "O'lcham tanlang"}
           </p>
           <button
             type="button"
             onClick={toggleAll}
             disabled={loading || availableVariants.length === 0}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 px-4 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {allSelected ? 'Tanlovni tozalash' : 'Hammasini tanlash'}
+            {allSelected ? 'Tozalash' : 'Hammasini tanlash'}
           </button>
         </div>
 
-        {/* Variants */}
-        <div className="space-y-4">
-          {Object.entries(getColorVariants()).map(([colorName, variants]) => (
-            <div key={colorName} className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">{colorName}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {variants.map(variant => (
+        {availableVariants.length === 0 && (
+          <p className="m-0 py-8 text-center text-base text-gray-500">Barcha variantlar tugagan</p>
+        )}
+
+        {Object.entries(getColorVariants()).map(([colorName, variants]) => (
+          <div key={colorName} className="space-y-2.5">
+            <h4 className="m-0 flex items-center gap-2 text-base font-semibold text-gray-900">
+              <span
+                className="w-5 h-5 rounded-full border border-gray-300"
+                style={{ backgroundColor: variants[0].color_hex || '#e5e7eb' }}
+              />
+              {colorName}
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {variants.map(variant => {
+                const selected = isSelected(variant);
+                return (
                   <button
                     key={variant.id}
                     type="button"
-                    aria-pressed={isSelected(variant)}
-                    className={`relative p-2 border-2 rounded-lg text-left transition-all duration-200 ${
-                      isSelected(variant)
-                        ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                    } ${variant.stock_quantity <= 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    aria-pressed={selected}
                     onClick={() => toggleVariant(variant)}
-                    disabled={variant.stock_quantity <= 0 || loading}
+                    disabled={loading}
+                    className={`relative min-h-[92px] p-3 rounded-xl border-2 text-left transition-colors ${
+                      selected
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                    }`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-semibold text-gray-900">{variant.size_name}</span>
-                      <span className="text-sm font-bold text-green-600">{variant.price} UZS</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">
-                        {variant.stock_quantity} dona
+                    {selected && (
+                      <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                        <Check size={16} />
                       </span>
-                      {isSelected(variant) && (
-                        <Check size={16} className="text-blue-600" />
-                      )}
-                    </div>
+                    )}
+                    <span className="block text-2xl font-bold text-gray-900">{variant.size_name || '—'}</span>
+                    <span className="block mt-1 text-sm font-semibold text-gray-800 tabular-nums">{formatCurrency(Number(variant.price) || 0)}</span>
+                    <span className={`block text-xs ${variant.stock_quantity <= 2 ? 'text-amber-600' : 'text-gray-500'}`}>
+                      {variant.stock_quantity} dona qoldi
+                    </span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
 
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
-          <Button
-            variant="secondary"
+        <div className="grid grid-cols-[1fr_2fr] gap-3 pt-4 border-t border-gray-100">
+          <button
+            type="button"
             onClick={onClose}
             disabled={loading}
-            fullWidth
+            className="h-14 rounded-xl border-2 border-gray-200 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Bekor qilish
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={handleConfirm}
             disabled={selectedIds.length === 0 || loading}
-            loading={loading}
-            fullWidth
+            className="h-14 px-3 rounded-xl bg-blue-600 text-white text-lg font-bold hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed truncate"
           >
-            {selectedIds.length > 1 ? `Tanlash (${selectedIds.length})` : 'Tanlash'}
-          </Button>
+            {selectedIds.length === 0
+              ? "O'lcham tanlang"
+              : `Savatga qo'shish (${selectedIds.length}) · ${formatCurrency(selectedTotal)}`}
+          </button>
         </div>
       </div>
     </Modal>

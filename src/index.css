@@ -256,7 +256,8 @@ a {
   transition: color var(--transition-fast);
 }
 
-a:hover {
+/* :where() keeps specificity at (0,0,1) so Tailwind text-* utilities on links still win */
+a:where(:hover) {
   color: var(--color-primary-600);
 }
 
@@ -266,4 +267,11 @@ button {
 
 input, textarea, select {
   font-family: inherit;
+}
+
+/* Checkout receipt: print only the receipt, not the whole app. */
+@media print {
+  body * { visibility: hidden; }
+  #receipt, #receipt * { visibility: visible; }
+  #receipt { position: fixed; left: 0; top: 0; width: 80mm; border: none; padding: 0; }
 }

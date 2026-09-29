@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Package, Palette, Ruler, Calendar, Tag, Settings } from 'lucide-react';
-import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import { Card, Button } from '../components/ui';
 import Table from '../components/tables/Table';
@@ -370,7 +369,6 @@ const SettingsPage = () => {
   );
 
   return (
-    <Layout>
       <PageLayout 
         maxWidth="full"
         spacing="sm"
@@ -488,7 +486,6 @@ const SettingsPage = () => {
           </Modal>
         </div>
       </PageLayout>
-    </Layout>
   );
 };
 

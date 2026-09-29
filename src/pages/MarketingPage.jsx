@@ -10,7 +10,6 @@
 import { useEffect, Suspense } from 'react';
 import { MessageSquare } from 'lucide-react';
 import logger from '../utils/logger';
-import Layout from '../components/layout/Layout';
 import PageLayout from '../components/layout/PageLayout';
 import { LoadingSpinner, Card } from '../components/ui';
 import MarketingContent from '../components/marketing/MarketingContent';
@@ -87,16 +86,13 @@ export default function MarketingPage() {
   // Show loading during authentication check
   if (authLoading) {
     return (
-      <Layout>
         <PageLayout>
           <MarketingLoading />
         </PageLayout>
-      </Layout>
     );
   }
 
   return (
-    <Layout>
       <PageLayout 
         maxWidth="full"
         spacing="sm"
@@ -106,6 +102,5 @@ export default function MarketingPage() {
           <MarketingPageContent />
         </Suspense>
       </PageLayout>
-    </Layout>
   );
 } 

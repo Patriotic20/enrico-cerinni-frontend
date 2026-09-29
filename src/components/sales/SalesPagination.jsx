@@ -63,8 +63,8 @@ export default function SalesPagination({
         <span className="text-sm text-gray-600 font-medium">
           {pagination.total > 0 ? (
             <>
-              {(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} 
-              dan {pagination.total} ta
+              {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)}
+              {' '}/ {pagination.total} ta
             </>
           ) : (
             'Natija topilmadi'

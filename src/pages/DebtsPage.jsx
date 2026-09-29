@@ -1,20 +1,60 @@
-import { useEffect, useState } from 'react';
-import { RefreshCw, DollarSign, AlertCircle, User, Eye, CreditCard, Receipt, Send, Filter } from 'lucide-react';
-import Layout from '../components/layout/Layout';
+import { useEffect, useMemo, useState } from 'react';
+import { RefreshCw, Wallet, Users, TrendingUp, Search, Plus, Receipt, CreditCard, X, Phone, ChevronRight, AlertTriangle, Send, ShoppingBag, Clock } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
-import Table from '../components/tables/Table';
 import DebtPaymentModal from '../components/modals/DebtPaymentModal';
 import AddDebtModal from '../components/modals/AddDebtModal';
-import { DebtFilters, DebtTrendChart } from '../components/debts';
-import { LoadingSpinner, Card, Button } from '../components/ui';
+import { LoadingSpinner } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
-import { useDebounce } from '../hooks/useDebounce';
 import { clientsAPI, salesAPI } from '../api';
+import { isStaff } from '../utils/constants';
+import { formatNumber } from '../utils/format';
 import toast from 'react-hot-toast';
+
+// Whole sums read faster than "25,142,526.90" in a debt list.
+const money = (v) => formatNumber(Math.round(Number(v) || 0));
+const initials = (c) => `${c.first_name?.[0] || ''}${c.last_name?.[0] || ''}`.toUpperCase() || '?';
+const fullName = (c) => `${c.first_name || ''} ${c.last_name || ''}`.trim();
+const DAY = 86400000;
+const daysSince = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d)) / DAY)) : null);
+const shortDate = (d) => (d ? new Date(d).toLocaleDateString('uz-UZ') : '—');
+
+// Aging buckets by the oldest unpaid sale. Manual debts with no sale count as fresh.
+const BUCKETS = [
+  { key: 'b30', label: '0–30 kun', max: 30, bar: 'bg-amber-400', chip: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { key: 'b60', label: '31–60 kun', max: 60, bar: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700 border-orange-200' },
+  { key: 'b90', label: '61–90 kun', max: 90, bar: 'bg-red-500', chip: 'bg-red-50 text-red-700 border-red-200' },
+  { key: 'b90p', label: '90+ kun', max: Infinity, bar: 'bg-red-800', chip: 'bg-red-100 text-red-900 border-red-300' },
+];
+const bucketOf = (age) => BUCKETS.find(b => age <= b.max);
+
+const SORTS = {
+  debt_desc: { label: 'Qarz: ko\'pdan kamga', fn: (a, b) => b.debt_amount - a.debt_amount },
+  debt_asc: { label: 'Qarz: kamdan ko\'pga', fn: (a, b) => a.debt_amount - b.debt_amount },
+  age_desc: { label: 'Eng eski qarz', fn: (a, b) => b.age - a.age },
+  ratio_desc: { label: 'To\'lanmagan ulush', fn: (a, b) => b.ratio - a.ratio },
+  name_asc: { label: 'Ism bo\'yicha', fn: (a, b) => a.name.localeCompare(b.name) },
+};
+
+function Kpi({ icon: Icon, tone, label, value, unit, hint }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tone}`}>
+        <Icon size={18} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-gray-500 m-0">{label}</p>
+        <p className="text-xl font-bold text-gray-900 m-0 tabular-nums whitespace-nowrap">
+          {value} <span className="text-sm font-medium text-gray-400">{unit}</span>
+        </p>
+        {hint && <p className="text-[11px] text-gray-400 m-0 truncate">{hint}</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function DebtsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [clients, setClients] = useState([]);
+  const [allClients, setAllClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientDebts, setClientDebts] = useState([]);
@@ -22,169 +62,97 @@ export default function DebtsPage() {
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAddDebtModal, setShowAddDebtModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [activeTab, setActiveTab] = useState('sales'); // 'sales' or 'transactions'
-  const [stats, setStats] = useState({
-    totalDebt: 0,
-    totalClients: 0,
-    averageDebt: 0
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    search: '',
-    start_date: '',
-    end_date: '',
-    min_debt: '',
-    max_debt: '',
-    sort_by: 'debt_amount_desc'
-  });
-  const [trendData, setTrendData] = useState([]);
-  const [paymentTrendData, setPaymentTrendData] = useState([]);
-  const [trendLoading, setTrendLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('sales');
+  const [search, setSearch] = useState('');
+  const [bucket, setBucket] = useState('all');
+  const [sortBy, setSortBy] = useState('debt_desc');
 
   useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated()) {
-        window.location.href = '/login';
-      }
+    if (!authLoading && !isAuthenticated()) {
+      window.location.href = '/login';
     }
   }, [authLoading, user]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated()) {
-      loadClientsWithDebts();
-      loadDebtStats();
-      loadDebtTrend();
-      loadPaymentTrend();
+      refreshAll();
     }
   }, [authLoading]);
 
-  // Debounce filters so typing fires one request after the user stops.
-  const debouncedFilters = useDebounce(filters, 400);
-
-  // Effect for filtering
-  useEffect(() => {
-    if (!authLoading && isAuthenticated()) {
-      loadClientsWithDebts();
-    }
-  }, [debouncedFilters]);
-
-  const loadClientsWithDebts = async (filterParams = {}) => {
+  // One insights call gives debt, debt age, spend and orders per client;
+  // search/filter/sort then run locally on that list.
+  // ponytail: loads every client, fine for a few thousand (same as ClientsPage).
+  const refreshAll = async () => {
     setLoading(true);
     try {
-      const params = {
-        has_debt: true,
-        // This page has no pager, so ask for the whole debtor list at once
-        // instead of silently showing only the first 10.
-        size: 100,
-        ...filterParams,
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, value]) => value !== '')
-        )
-      };
-      const response = await clientsAPI.getClients(params);
-      if (response.success && response.data) {
-        // ponytail: server has_debt filter unreliable; filter client-side too
-        const items = (response.data.items || []).filter(c => (c.debt_amount || 0) > 0);
-        setClients(items);
-      }
+      const response = await clientsAPI.getInsights();
+      if (response?.success) setAllClients(response.data || []);
     } catch (error) {
-      console.error('Error loading clients with debts:', error);
+      console.error('Error loading debts:', error);
+      toast.error('Qarzdorliklarni yuklab bo\'lmadi');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadDebtStats = async () => {
-    try {
-      const response = await salesAPI.getDebtStats();
-      if (response?.success && response?.data) {
-        const d = response.data;
-        setStats({
-          totalDebt: d.total_debt ?? 0,
-          totalClients: d.clients_with_debt ?? 0,
-          averageDebt: d.avg_debt ?? 0
-        });
-      } else {
-        console.warn('Debt stats API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.warn('Debt stats API not available or failed:', {
-        message: error?.message || 'Unknown error',
-        status: error?.response?.status || 'No status',
-        statusText: error?.response?.statusText || 'No status text',
-        url: error?.config?.url || 'No URL'
-      });
-    }
-  };
+  const debtors = useMemo(() => allClients
+    .filter(c => c.debt_amount > 0)
+    .map(c => {
+      const age = daysSince(c.oldest_debt_date) ?? 0;
+      return {
+        ...c,
+        name: fullName(c) || 'Noma\'lum',
+        age,
+        bucket: bucketOf(age),
+        sinceLast: daysSince(c.last_purchase_date),
+        // Share of everything they ever bought that is still unpaid.
+        ratio: c.spent ? Math.min(1, c.debt_amount / c.spent) : 1,
+      };
+    }), [allClients]);
 
-  const loadDebtTrend = async () => {
-    setTrendLoading(true);
-    try {
-      const response = await salesAPI.getDebtTrend({ days: 30 });
-      if (response.success && response.data) {
-        setTrendData(response.data);
-      } else {
-        console.warn('Debt trend API returned unsuccessful response');
-        setTrendData([]);
-      }
-    } catch (error) {
-      console.warn('Debt trend API not available or failed:', {
-        message: error?.message || 'Unknown error',
-        status: error?.response?.status || 'No status',
-        statusText: error?.response?.statusText || 'No status text',
-        url: error?.config?.url || 'No URL'
-      });
-      setTrendData([]);
-    } finally {
-      setTrendLoading(false);
-    }
-  };
+  const stats = useMemo(() => {
+    const total = debtors.reduce((s, c) => s + c.debt_amount, 0);
+    const spentAll = allClients.reduce((s, c) => s + (c.spent || 0), 0);
+    const byBucket = Object.fromEntries(BUCKETS.map(b => [b.key, { sum: 0, count: 0 }]));
+    debtors.forEach(c => { byBucket[c.bucket.key].sum += c.debt_amount; byBucket[c.bucket.key].count++; });
+    return {
+      total,
+      byBucket,
+      overdue: byBucket.b90.sum + byBucket.b90p.sum,
+      overdueCount: byBucket.b90.count + byBucket.b90p.count,
+      // Weighted by amount: "how old is the average unpaid sum".
+      avgAge: total ? Math.round(debtors.reduce((s, c) => s + c.age * c.debt_amount, 0) / total) : 0,
+      count: debtors.length,
+      clientCount: allClients.length,
+      avg: debtors.length ? total / debtors.length : 0,
+      max: Math.max(0, ...debtors.map(c => c.debt_amount)),
+      shareOfSales: spentAll ? (total / spentAll) * 100 : 0,
+    };
+  }, [debtors, allClients]);
 
-
-  const loadPaymentTrend = async () => {
-    try {
-      const response = await salesAPI.getPaymentTrend({ days: 30 });
-      if (response.success && response.data) {
-        setPaymentTrendData(response.data);
-      } else {
-        console.warn('Payment trend API returned unsuccessful response');
-        setPaymentTrendData([]);
-      }
-    } catch (error) {
-      // Better error logging with more details
-      console.warn('Payment trend API not available or failed:', {
-        message: error?.message || 'Unknown error',
-        status: error?.response?.status || 'No status',
-        statusText: error?.response?.statusText || 'No status text',
-        url: error?.config?.url || 'No URL'
-      });
-      setPaymentTrendData([]);
-    }
-  };
-
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return debtors
+      .filter(c => bucket === 'all' || c.bucket.key === bucket)
+      .filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone || '').includes(q))
+      .sort(SORTS[sortBy].fn);
+  }, [debtors, bucket, search, sortBy]);
+  const rowsTotal = rows.reduce((s, c) => s + c.debt_amount, 0);
 
   const handleViewClientDebts = async (client) => {
     try {
-      // Load both sales and transactions
       const [salesResponse, transactionsResponse] = await Promise.all([
         salesAPI.getClientDebts(client.id),
         salesAPI.getClientDebtHistory(client.id)
       ]);
-      
-      if (salesResponse.success && salesResponse.data) {
-        setClientDebts(salesResponse.data);
-      }
-      
-      if (transactionsResponse.success && transactionsResponse.data) {
-        setClientTransactions(transactionsResponse.data);
-      }
-      
+      setClientDebts(salesResponse.success ? salesResponse.data || [] : []);
+      setClientTransactions(transactionsResponse.success ? transactionsResponse.data || [] : []);
       setSelectedClient(client);
+      setActiveTab('sales');
       setShowDebtModal(true);
-      setActiveTab('sales'); // Default to sales tab
     } catch (error) {
       console.error('Error loading client debts:', error);
+      toast.error('Tafsilotlarni yuklab bo\'lmadi');
     }
   };
 
@@ -195,452 +163,406 @@ export default function DebtsPage() {
 
   // DebtPaymentModal already posted the payment — this only reacts to it.
   // Calling the API again here charged the client twice for every payment.
-  const handlePaymentCompleted = (paymentAmount) => {
+  const handlePaymentCompleted = () => {
     toast.success('To\'lov muvaffaqiyatli amalga oshirildi');
     setShowPaymentModal(false);
+    setShowDebtModal(false);
     setSelectedClient(null);
     setClientDebts([]);
     setClientTransactions([]);
-    loadClientsWithDebts();
-    loadDebtStats();
-    loadDebtTrend();
-    loadPaymentTrend();
+    refreshAll();
   };
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleClearFilters = () => {
-    setFilters({
-      search: '',
-      start_date: '',
-      end_date: '',
-      min_debt: '',
-      max_debt: '',
-      sort_by: 'debt_amount_desc'
-    });
-  };
-
-  const toggleFilters = () => {
-    setShowFilters(!showFilters);
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('uz-UZ', {
-      style: 'currency',
-      currency: 'UZS'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
-
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString('uz-UZ');
-  };
-
-  const getTransactionTypeLabel = (type) => {
-    switch (type) {
-      case 'sale':
-        return 'Sotuv';
-      case 'debt_payment':
-        return 'To\'lov';
-      default:
-        return type;
-    }
-  };
-
-  const getTransactionTypeColor = (type) => {
-    switch (type) {
-      case 'sale':
-        return '#dc2626'; // red
-      case 'debt_payment':
-        return '#059669'; // green
-      default:
-        return '#6b7280'; // gray
-    }
-  };
-
-  // Table columns configuration
-  const columns = [
-    {
-      key: 'client_name',
-      label: 'Mijoz',
-      render: (value, row) => (
-        <div className="flex items-center gap-2">
-          <User size={16} />
-          <span>{row.first_name} {row.last_name}</span>
-        </div>
-      )
-    },
-    {
-      key: 'phone',
-      label: 'Telefon',
-      render: (value) => value || '—'
-    },
-    {
-      key: 'debt_amount',
-      label: 'Qarzdorlik miqdori',
-      render: (value) => (
-        <span style={{ 
-          color: '#dc2626', 
-          fontWeight: '600',
-          fontSize: '0.875rem'
-        }}>
-          {formatCurrency(value)}
-        </span>
-      )
-    },
-    {
-      key: 'actions',
-      label: 'Amallar',
-      render: (value, row) => (
-        <div className="flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewClientDebts(row);
-            }}
-            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-          >
-            Ko'rish
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePaymentClick(row);
-            }}
-            className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded"
-          >
-            To'lov
-          </button>
-        </div>
-      )
-    }
-  ];
+  const formatDate = (d) => new Date(d).toLocaleDateString('uz-UZ');
+  const formatDateTime = (d) => new Date(d).toLocaleString('uz-UZ');
 
   if (authLoading) {
     return (
-      <Layout>
-        <PageLayout>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <LoadingSpinner 
-              message="Autentifikatsiya tekshirilmoqda..." 
-              size="lg" 
-            />
-          </div>
-        </PageLayout>
-      </Layout>
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner message="Autentifikatsiya tekshirilmoqda..." size="lg" />
+        </div>
+      </PageLayout>
     );
   }
 
+  const bucketBtn = (active) => `text-left rounded-lg border px-3 py-2 transition-colors ${
+    active ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+  }`;
+
   return (
-    <Layout>
-      <PageLayout 
-        title="Qarzdorliklar"
-        subtitle="Mijozlar qarzdorliklarini boshqarish va to'lovlarni kuzatish"
-        maxWidth="full"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen"
-      >
-        {/* Header with Compact Stats */}
-        <Card className="mb-4 bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-md">
-                <DollarSign className="text-white" size={18} />
-              </div>
-              <div>
-                <p className="text-sm text-red-600 font-medium m-0">Jami qarz</p>
-                <p className="text-xl font-bold text-red-700 m-0">{formatCurrency(stats.totalDebt)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-                <User className="text-white" size={18} />
-              </div>
-              <div>
-                <p className="text-sm text-blue-600 font-medium m-0">Qarzdor mijozlar</p>
-                <p className="text-xl font-bold text-blue-700 m-0">{stats.totalClients} ta</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center shadow-md">
-                <AlertCircle className="text-white" size={18} />
-              </div>
-              <div>
-                <p className="text-sm text-yellow-600 font-medium m-0">O'rtacha qarz</p>
-                <p className="text-xl font-bold text-yellow-700 m-0">{formatCurrency(stats.averageDebt)}</p>
-              </div>
-            </div>
+    <PageLayout
+      title="Qarzdorliklar"
+      subtitle="Mijozlar qarzdorliklarini boshqarish va to'lovlarni kuzatish"
+      maxWidth="full"
+      spacing="sm"
+      className="bg-gray-50 min-h-screen"
+    >
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
+        <Kpi icon={Wallet} tone="bg-red-50 text-red-600" label="Jami qarz" value={money(stats.total)} unit="UZS"
+          hint={`Umumiy savdoning ${stats.shareOfSales.toFixed(1)}% to'lanmagan`} />
+        <Kpi icon={Users} tone="bg-blue-50 text-blue-600" label="Qarzdor mijozlar" value={stats.count} unit="ta"
+          hint={`${stats.clientCount} mijozning ${stats.clientCount ? Math.round(stats.count / stats.clientCount * 100) : 0}%`} />
+        <Kpi icon={TrendingUp} tone="bg-amber-50 text-amber-600" label="O'rtacha qarz" value={money(stats.avg)} unit="UZS"
+          hint={`Eng kattasi: ${money(stats.max)} UZS`} />
+        <Kpi icon={AlertTriangle} tone="bg-red-100 text-red-800" label="60 kundan oshgan" value={money(stats.overdue)} unit="UZS"
+          hint={`${stats.overdueCount} mijoz · o'rtacha qarz yoshi ${stats.avgAge} kun`} />
+      </div>
+
+      {/* Aging: where the money is stuck, doubling as a one-click filter */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <p className="text-sm font-semibold text-gray-900 m-0 flex items-center gap-1.5">
+            <Clock size={15} className="text-gray-400" /> Qarz muddati bo'yicha
+          </p>
+          <p className="text-xs text-gray-400 m-0">Eng eski to'lanmagan chekdan hisoblanadi</p>
+        </div>
+        <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mb-3">
+          {BUCKETS.map(b => stats.byBucket[b.key].sum > 0 && (
+            <div key={b.key} className={b.bar} title={`${b.label}: ${money(stats.byBucket[b.key].sum)} UZS`}
+              style={{ width: `${(stats.byBucket[b.key].sum / (stats.total || 1)) * 100}%` }} />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+          <button onClick={() => setBucket('all')} className={bucketBtn(bucket === 'all')}>
+            <p className="text-xs text-gray-500 m-0">Hammasi · {stats.count} ta</p>
+            <p className="text-sm font-bold text-gray-900 m-0 tabular-nums">{money(stats.total)}</p>
+          </button>
+          {BUCKETS.map(b => {
+            const s = stats.byBucket[b.key];
+            return (
+              <button key={b.key} onClick={() => setBucket(bucket === b.key ? 'all' : b.key)} className={bucketBtn(bucket === b.key)}>
+                <p className="text-xs text-gray-500 m-0 flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${b.bar}`} /> {b.label} · {s.count} ta
+                </p>
+                <p className="text-sm font-bold text-gray-900 m-0 tabular-nums">
+                  {money(s.sum)}{' '}
+                  <span className="text-[11px] font-medium text-gray-400">{stats.total ? Math.round(s.sum / stats.total * 100) : 0}%</span>
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-200">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Mijoz ismi yoki telefon raqami..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+            />
           </div>
-        </Card>
-
-        {/* Debt Trend Chart - Temporarily disabled for debugging */}
-        {/* <DebtTrendChart data={trendData} paymentData={paymentTrendData} loading={trendLoading} /> */}
-
-        {/* Main Content */}
-        <Card>
-          {/* Search and Action Buttons */}
-          <div className="flex items-center justify-between gap-4 p-4 border-b border-gray-200">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Mijoz ismi yoki telefon raqami bo'yicha qidirish..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="py-2 pl-3 pr-8 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          >
+            {Object.entries(SORTS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
+          </select>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={refreshAll}
+              disabled={loading}
+              title="Yangilash"
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+            {isStaff(user) && (
               <button
                 onClick={() => setShowAddDebtModal(true)}
-                className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg"
               >
-                <DollarSign size={16} />
+                <Plus size={16} />
                 <span>Qarz qo'shish</span>
               </button>
-              <button
-                onClick={toggleFilters}
-                className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-              >
-                <Filter size={16} />
-                <span>Filtrlar</span>
-              </button>
-              <button
-                onClick={() => {
-                  loadClientsWithDebts();
-                  loadDebtStats();
-                  loadDebtTrend();
-                  loadPaymentTrend();
-                }}
-                disabled={loading}
-                className="flex items-center gap-1 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
-              >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ''} />
-                <span>Yangilash</span>
-              </button>
-            </div>
+            )}
           </div>
-          
-          {/* The "Filtrlar" button toggles this panel. It was commented out, so
-              the button did nothing at all. */}
-          <DebtFilters
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClearFilters={handleClearFilters}
-            showFilters={showFilters}
-          />
-          
-          {/* Table Content */}
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." size="lg" />
-            </div>
-          ) : clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <DollarSign size={64} className="text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Qarzdorliklar topilmadi</h3>
-              <p className="text-gray-600">Qarzdorligi bo'lgan mijozlar mavjud emas</p>
-            </div>
-          ) : (
-            <div className="overflow-hidden">
-              <Table
-                columns={columns}
-                data={clients}
-                loading={loading}
-                emptyMessage="Qarzdorligi bo'lgan mijozlar mavjud emas"
-                sortable={true}
-              />
-            </div>
-          )}
-        </Card>
+        </div>
 
-        {/* Debt Details Modal */}
-        {showDebtModal && selectedClient && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowDebtModal(false)}>
-            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              {/* Compact Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center">
-                    <User className="text-white" size={16} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 m-0">{selectedClient.first_name} {selectedClient.last_name}</h2>
-                    <p className="text-sm text-gray-600 m-0">Qarzdorlik tafsilotlari</p>
-                  </div>
-                </div>
-                <button 
-                  className="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-                  onClick={() => setShowDebtModal(false)}
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="p-4">
-                {/* Compact Debt Summary */}
-                <Card className="mb-4 bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="text-red-600" size={20} />
-                      <div>
-                        <span className="text-sm text-red-600 font-medium block">Jami qarzdorlik</span>
-                        <span className="text-xl font-bold text-red-700">{formatCurrency(selectedClient.debt_amount)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Compact Tab Navigation */}
-                <div className="flex border-b border-gray-200 mb-4">
-                  <button
-                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'sales' 
-                        ? 'border-blue-500 text-blue-600' 
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                    onClick={() => setActiveTab('sales')}
-                  >
-                    <Receipt size={14} />
-                    <span>Sotuvlar</span>
-                  </button>
-                  <button
-                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === 'transactions' 
-                        ? 'border-blue-500 text-blue-600' 
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                    onClick={() => setActiveTab('transactions')}
-                  >
-                    <CreditCard size={14} />
-                    <span>Tranzaksiyalar</span>
-                  </button>
-                </div>
-
-                {/* Tab Content */}
-                <div className="max-h-60 overflow-y-auto mb-4">
-                  {activeTab === 'sales' && (
-                    <div className="space-y-2">
-                      {clientDebts.length > 0 ? (
-                        clientDebts.map((sale) => (
-                          <div key={sale.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-gray-900 text-sm">Chek #{sale.receipt_number}</span>
-                              <span className="text-xs text-gray-500">{formatDate(sale.created_at)}</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <span className="text-gray-600">Jami: <span className="font-medium text-gray-900">{formatCurrency(sale.total_amount)}</span></span>
-                              <span className="text-gray-600">To'langan: <span className="font-medium text-green-600">{formatCurrency(sale.paid_amount)}</span></span>
-                              <span className="text-gray-600">
-                                Qoldi: <span className="font-medium text-red-600">{formatCurrency(sale.total_amount - sale.paid_amount)}</span>
-                              </span>
-                            </div>
+        {/* List */}
+        {loading && debtors.length === 0 ? (
+          <div className="flex items-center justify-center py-16">
+            <LoadingSpinner message="Ma'lumotlar yuklanmoqda..." size="lg" />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-3">
+              <Wallet size={26} />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Qarzdorliklar topilmadi</h3>
+            <p className="text-sm text-gray-500">
+              {debtors.length ? 'Filtr bo\'yicha mos mijoz yo\'q' : 'Qarzdorligi bo\'lgan mijozlar mavjud emas'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+                  <th className="w-10 px-4 py-2.5 text-left font-semibold">#</th>
+                  <th className="px-4 py-2.5 text-left font-semibold">Mijoz</th>
+                  <th className="px-4 py-2.5 text-left font-semibold">Muddati</th>
+                  <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">Xaridlar</th>
+                  <th className="px-4 py-2.5 text-left font-semibold hidden md:table-cell w-[18%]">To'lanmagan ulush</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Qarzdorlik</th>
+                  <th className="px-4 py-2.5 text-right font-semibold w-40">Amallar</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y divide-gray-100 ${loading ? 'opacity-60' : ''}`}>
+                {rows.map((c, i) => {
+                  const pctOfTotal = stats.total ? (c.debt_amount / stats.total) * 100 : 0;
+                  const ratioPct = Math.round(c.ratio * 100);
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => handleViewClientDebts(c)}
+                      className="group hover:bg-gray-50 cursor-pointer"
+                    >
+                      <td className="px-4 py-3 text-gray-400 tabular-nums">{i + 1}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-full border text-xs font-semibold flex items-center justify-center shrink-0 ${c.bucket.chip}`}>
+                            {initials(c)}
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 text-center py-6 text-sm">Qarzdorlik sotuvlari topilmadi</p>
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'transactions' && (
-                    <div className="space-y-2">
-                      {clientTransactions.length > 0 ? (
-                        clientTransactions.map((transaction) => (
-                          <div key={transaction.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <span 
-                                className="font-semibold px-2 py-1 rounded text-xs"
-                                style={{ 
-                                  color: getTransactionTypeColor(transaction.type),
-                                  backgroundColor: `${getTransactionTypeColor(transaction.type)}20`
-                                }}
-                              >
-                                {getTransactionTypeLabel(transaction.type)}
-                              </span>
-                              <span className="text-xs text-gray-500">{formatDateTime(transaction.created_at)}</span>
-                            </div>
-                            <div className="text-xs">
-                              <span className="text-gray-600">Miqdori: <span className="font-medium text-gray-900">{formatCurrency(transaction.amount)}</span></span>
-                            </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 m-0 truncate flex items-center gap-1.5">
+                              {c.name}
+                              {c.telegram_chat_id && <Send size={12} className="text-sky-500 shrink-0" aria-label="Telegram ulangan" />}
+                            </p>
+                            <p className="text-xs text-gray-500 m-0 tabular-nums">{c.phone || '—'}</p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 text-center py-6 text-sm">Qarzdorlik tranzaksiyalari topilmadi</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Compact Payment Section */}
-                <Card className="bg-green-50 border-green-200">
-                  <h3 className="text-base font-semibold text-gray-900 mb-3">To'lov qilish</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">To'lov miqdori (UZS)</label>
-                      <input
-                        type="number"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        placeholder="To'lov miqdorini kiriting"
-                        max={selectedClient.debt_amount}
-                        step="0.01"
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <small className="text-gray-500 text-xs">Maksimal: {formatCurrency(selectedClient.debt_amount)}</small>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleProcessPayment(selectedClient.id, Number(paymentAmount))}
-                        disabled={!paymentAmount || Number(paymentAmount) <= 0}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        To'lovni amalga oshirish
-                      </button>
-                      <button 
-                        onClick={() => setShowDebtModal(false)}
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-                      >
-                        Yopish
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-block px-2 py-0.5 rounded-md border text-xs font-semibold tabular-nums ${c.bucket.chip}`}>
+                          {c.oldest_debt_date ? `${c.age} kun` : 'Qo\'lda'}
+                        </span>
+                        <p className="text-[11px] text-gray-400 m-0 mt-0.5">
+                          {c.oldest_debt_date ? `${shortDate(c.oldest_debt_date)} dan` : 'chek yo\'q'}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
+                        <p className="text-gray-900 m-0 tabular-nums flex items-center gap-1">
+                          <ShoppingBag size={12} className="text-gray-400" /> {c.orders} ta · {money(c.spent)}
+                        </p>
+                        <p className="text-[11px] text-gray-400 m-0">
+                          Oxirgi: {c.sinceLast == null ? '—' : c.sinceLast === 0 ? 'bugun' : `${c.sinceLast} kun oldin`}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <div className="flex items-center gap-2" title="Jami xariddan to'lanmagan qismi">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${ratioPct >= 50 ? 'bg-red-500' : ratioPct >= 25 ? 'bg-orange-400' : 'bg-amber-300'}`}
+                              style={{ width: `${ratioPct}%` }}
+                            />
+                          </div>
+                          <span className="w-9 text-right text-xs text-gray-500 tabular-nums">{ratioPct}%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <p className="m-0">
+                          <span className="font-semibold text-red-600 tabular-nums">{money(c.debt_amount)}</span>
+                          <span className="text-xs text-gray-400 ml-1">UZS</span>
+                        </p>
+                        <p className="text-[11px] text-gray-400 m-0 tabular-nums">jami qarzning {pctOfTotal.toFixed(1)}%</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {c.phone && (
+                            <a
+                              href={`tel:${c.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Qo'ng'iroq qilish"
+                              className="p-1.5 rounded-md border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-200"
+                            >
+                              <Phone size={13} />
+                            </a>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handlePaymentClick(c); }}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded-md"
+                          >
+                            <CreditCard size={13} />
+                            To'lov
+                          </button>
+                          <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 text-xs text-gray-500 border-t border-gray-200">
+                  <td colSpan={5} className="px-4 py-2.5">
+                    {rows.length} ta mijoz{rows.length !== debtors.length && ` (${debtors.length} tadan)`}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-gray-900 tabular-nums whitespace-nowrap">{money(rowsTotal)} UZS</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
           </div>
         )}
+      </div>
 
-        {/* Add Debt Modal */}
-        <AddDebtModal
-          isOpen={showAddDebtModal}
-          onClose={() => setShowAddDebtModal(false)}
-          onAdded={() => {
-            loadClientsWithDebts();
-            loadDebtStats();
-          }}
-        />
+      {/* Debt Details Modal */}
+      {showDebtModal && selectedClient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowDebtModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 text-sm font-semibold flex items-center justify-center">
+                  {initials(selectedClient)}
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 m-0">{fullName(selectedClient)}</h2>
+                  <p className="text-xs text-gray-500 m-0 flex items-center gap-1">
+                    <Phone size={11} /> {selectedClient.phone || '—'}
+                  </p>
+                </div>
+              </div>
+              <button
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                onClick={() => setShowDebtModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-        {/* Debt Payment Modal */}
-        <DebtPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          client={selectedClient}
-          currentDebt={selectedClient?.debt_amount || 0}
-          onPaymentComplete={handlePaymentCompleted}
-        />
-      </PageLayout>
-    </Layout>
+            {/* Summary */}
+            <div className="grid grid-cols-2 gap-3 p-4 pb-0">
+              <div className="rounded-lg bg-red-50 px-3 py-2">
+                <p className="text-xs text-red-600 m-0">Jami qarzdorlik</p>
+                <p className="text-lg font-bold text-red-700 m-0 tabular-nums">{money(selectedClient.debt_amount)} UZS</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="text-xs text-gray-500 m-0">Qarzli cheklar</p>
+                <p className="text-lg font-bold text-gray-900 m-0 tabular-nums">{clientDebts.length} ta</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 px-4 pt-3 border-b border-gray-200">
+              {[
+                { key: 'sales', label: 'Sotuvlar', icon: Receipt, count: clientDebts.length },
+                { key: 'transactions', label: 'Tranzaksiyalar', icon: CreditCard, count: clientTransactions.length }
+              ].map(({ key, label, icon: Icon, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {label}
+                  <span className="text-xs text-gray-400">{count}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto">
+              {activeTab === 'sales' && (
+                clientDebts.length > 0 ? (
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="text-[11px] uppercase tracking-wide text-gray-500 border-b border-gray-100">
+                        <th className="px-4 py-2 text-left font-semibold">Chek</th>
+                        <th className="px-4 py-2 text-left font-semibold">Sana</th>
+                        <th className="px-4 py-2 text-right font-semibold">Jami</th>
+                        <th className="px-4 py-2 text-right font-semibold">To'langan</th>
+                        <th className="px-4 py-2 text-right font-semibold">Qoldi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 tabular-nums">
+                      {clientDebts.map((sale) => (
+                        <tr key={sale.id}>
+                          <td className="px-4 py-2 font-medium text-gray-900">#{sale.receipt_number}</td>
+                          <td className="px-4 py-2 text-gray-500">{formatDate(sale.created_at)}</td>
+                          <td className="px-4 py-2 text-right text-gray-900">{money(sale.total_amount)}</td>
+                          <td className="px-4 py-2 text-right text-green-600">{money(sale.paid_amount)}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-red-600">{money(sale.total_amount - sale.paid_amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-gray-500 text-center py-10 text-sm">Qarzdorlik sotuvlari topilmadi</p>
+                )
+              )}
+
+              {activeTab === 'transactions' && (
+                clientTransactions.length > 0 ? (
+                  <ul className="divide-y divide-gray-100">
+                    {clientTransactions.map((t) => {
+                      const isPayment = t.type === 'debt_payment';
+                      return (
+                        <li key={t.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isPayment ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                              {isPayment ? 'To\'lov' : t.type === 'sale' ? 'Sotuv' : t.type}
+                            </span>
+                            <span className="text-gray-500 text-xs">{formatDateTime(t.created_at)}</span>
+                          </div>
+                          <span className={`font-semibold tabular-nums ${isPayment ? 'text-green-600' : 'text-red-600'}`}>
+                            {isPayment ? '−' : '+'}{money(t.amount)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-center py-10 text-sm">Qarzdorlik tranzaksiyalari topilmadi</p>
+                )
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowDebtModal(false)}
+                className="px-4 py-2 text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Yopish
+              </button>
+              {/* Was an inline form calling an undefined handleProcessPayment — crashed on click. */}
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white rounded-lg"
+              >
+                <CreditCard size={15} />
+                To'lov qilish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AddDebtModal
+        isOpen={showAddDebtModal}
+        onClose={() => setShowAddDebtModal(false)}
+        onAdded={refreshAll}
+      />
+
+      <DebtPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        client={selectedClient}
+        currentDebt={selectedClient?.debt_amount || 0}
+        onPaymentComplete={handlePaymentCompleted}
+      />
+    </PageLayout>
   );
-} 
+}

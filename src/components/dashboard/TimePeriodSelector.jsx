@@ -23,14 +23,14 @@ export default function TimePeriodSelector({ selectedPeriod, onPeriodChange, cla
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
       >
-        <Calendar size={16} className="text-gray-500" />
-        <span className="text-sm font-medium text-gray-700">
+        <Calendar size={12} className="text-gray-500" />
+        <span className="text-xs font-medium text-gray-700">
           {selectedPeriodData.label}
         </span>
         <ChevronDown 
-          size={16} 
+          size={12}
           className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>

@@ -1,352 +1,233 @@
-import { useState, useEffect, useCallback } from 'react';
-import { TrendingDown, Plus, Search, Filter } from 'lucide-react';
-import Layout from '../components/layout/Layout';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, RefreshCw, Wallet, CalendarDays, Receipt, AlertCircle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import ExpenseModal from '../components/modals/ExpenseModal';
 import SupplierModal from '../components/modals/SupplierModal';
-import EmployeeModal from '../components/modals/EmployeeModal';
-import { LoadingSpinner, Card } from '../components/ui';
-import { 
-  FinanceStats, 
-  FinanceTabs, 
-  ExpensesTab, 
-  SuppliersTab, 
-  SalaryTab 
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui';
+import {
+  FinanceStats,
+  FinanceTabs,
+  ExpensesTab,
+  SuppliersTab,
+  SalaryTab
 } from '../components/finance';
 import { useFinance } from '../hooks/useFinance';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { ymd } from '../hooks/useSales';
 import { formatCurrency, formatDate } from '../utils/finance';
+import { cn } from '../utils/cn';
 
-// Finance header component similar to inventory
-const FinanceHeader = ({ stats, loading, onAddExpense, onAddSupplier, onAddEmployee, activeTab }) => {
-  const getTabInfo = () => {
-    switch (activeTab) {
-      case 'expenses':
-        return { title: 'Xarajatlar', subtitle: 'Umumiy xarajatlarni boshqaring', action: onAddExpense, actionText: 'Xarajat qo\'shish' };
-      case 'suppliers':
-        return { title: 'Yetkazib beruvchilar', subtitle: 'Yetkazib beruvchilarni boshqaring', action: onAddSupplier, actionText: 'Yetkazib beruvchi qo\'shish' };
-      case 'salary':
-        return { title: 'Xodimlar', subtitle: 'Xodimlar va ish haqini boshqaring', action: onAddEmployee, actionText: 'Xodim qo\'shish' };
-      default:
-        return { title: 'Moliyaviy boshqaruv', subtitle: 'Xarajatlar va moliyaviy ma\'lumotlar', action: onAddExpense, actionText: 'Qo\'shish' };
-    }
+const presets = () => {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  return [
+    { label: 'Bugun', start: ymd(now), end: '' },
+    { label: '7 kun', start: ymd(new Date(y, m, d - 6)), end: '' },
+    { label: 'Bu oy', start: ymd(new Date(y, m, 1)), end: '' },
+    { label: "O'tgan oy", start: ymd(new Date(y, m - 1, 1)), end: ymd(new Date(y, m, 0)) },
+    { label: 'Bu yil', start: ymd(new Date(y, 0, 1)), end: '' },
+    { label: 'Hammasi', start: '', end: '' },
+  ];
+};
+
+const TAB_ACTIONS = {
+  expenses: 'Xarajat qo\'shish',
+  suppliers: 'Yetkazib beruvchi',
+  salary: 'Xodimlar',
+};
+
+const Kpi = ({ icon: Icon, label, value, hint, tone = 'gray' }) => {
+  const tones = {
+    gray: 'bg-gray-100 text-gray-600',
+    red: 'bg-red-100 text-red-600',
+    orange: 'bg-orange-100 text-orange-600',
   };
-
-  const tabInfo = getTabInfo();
-
   return (
-    <Card className="mb-4 bg-gradient-to-r from-red-50 to-pink-50 border-red-200">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Title Section */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-md">
-            <TrendingDown className="text-white" size={20} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 m-0">
-              {tabInfo.title}
-            </h1>
-            <p className="text-sm text-gray-600 m-0 hidden sm:block">
-              {tabInfo.subtitle}
-            </p>
-          </div>
-        </div>
-        
-        {/* Summary Section */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Jami xarajat:</span>
-            <span className="inline-flex items-center justify-center px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">
-              {loading ? '...' : formatCurrency(stats.totalExpenses)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Oylik:</span>
-            <span className="inline-flex items-center justify-center px-2 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">
-              {loading ? '...' : formatCurrency(stats.monthlyExpenses)}
-            </span>
-          </div>
-          <button
-            onClick={tabInfo.action}
-            disabled={loading}
-            className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Plus size={16} className="mr-1" />
-            {tabInfo.actionText}
-          </button>
-        </div>
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+        <span className={cn('w-7 h-7 rounded-md flex items-center justify-center', tones[tone])}>
+          <Icon size={15} />
+        </span>
+        {label}
       </div>
+      <div className="mt-2 text-lg font-semibold text-gray-900 tabular-nums truncate" title={String(value)}>{value}</div>
+      {hint && <div className="text-xs text-gray-500 mt-0.5">{hint}</div>}
     </Card>
   );
 };
 
-// Loading component for finance page
-const FinanceLoading = ({ message = "Moliya ma'lumotlari yuklanmoqda..." }) => (
-  <div className="flex items-center justify-center min-h-[400px]">
-    <LoadingSpinner 
-      message={message} 
-      size="lg" 
-    />
-  </div>
-);
-
-// Skeleton loading for stats
-const StatsSkeleton = () => (
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-    {[...Array(4)].map((_, idx) => (
-      <Card key={idx} className="p-4">
-        <div className="animate-pulse">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="h-3 bg-gray-300 rounded mb-2 w-20"></div>
-              <div className="h-6 bg-gray-300 rounded mb-1 w-16"></div>
-              <div className="h-2 bg-gray-300 rounded w-12"></div>
-            </div>
-            <div className="w-2 h-12 bg-gray-300 rounded-full"></div>
-          </div>
-        </div>
-      </Card>
-    ))}
-  </div>
-);
-
-// Skeleton for tabs
-const TabsSkeleton = () => (
-  <Card className="p-1">
-    <div className="animate-pulse flex space-x-1">
-      {[...Array(3)].map((_, idx) => (
-        <div key={idx} className="flex-1 h-10 bg-gray-300 rounded-md"></div>
-      ))}
-    </div>
-  </Card>
-);
-
 const FinancePage = () => {
   const [activeTab, setActiveTab] = useState('expenses');
-  const [dataLoaded, setDataLoaded] = useState(false);
-  
-  // Modal states
+  const [period, setPeriod] = useState(() => presets()[2]); // Bu oy
+  const [category, setCategory] = useState('all');
+  const confirm = useConfirm();
+
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);
-  const [employeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingSupplier, setEditingSupplier] = useState(null);
-  const [editingEmployee, setEditingEmployee] = useState(null);
+  const navigate = useNavigate();
 
   const {
     loading,
-    dataLoading,
     error,
     expenses,
     suppliers,
-    employees,
+    salaryPayments,
     stats,
     handleDeleteExpense,
     handleDeleteSupplier,
-    handleDeleteEmployee,
     loadData,
-    refreshData
-  } = useFinance();
+    reloadPeriod,
+  } = useFinance(period);
 
-  // Set data loaded flag when loading completes
-  useEffect(() => {
-    if (!loading) {
-      setDataLoaded(true);
-    }
-  }, [loading]);
-
-  // Modal handlers
-  const handleAddExpense = () => {
-    setEditingExpense(null);
-    setExpenseModalOpen(true);
+  const confirmDelete = (title, onYes) => async (id) => {
+    const ok = await confirm({
+      title,
+      message: 'Rostdan ham o\'chirmoqchimisiz?',
+      description: 'Bu amalni qaytarib bo\'lmaydi.',
+      confirmText: 'Ha, o\'chirish',
+      variant: 'danger',
+    });
+    if (ok) onYes(id);
   };
 
-  const handleEditExpense = (expense) => {
-    setEditingExpense(expense);
-    setExpenseModalOpen(true);
-  };
+  const openExpense = (expense = null) => { setEditingExpense(expense); setExpenseModalOpen(true); };
+  const openSupplier = (supplier = null) => { setEditingSupplier(supplier); setSupplierModalOpen(true); };
 
-  const handleExpenseModalClose = () => {
-    setExpenseModalOpen(false);
-    setEditingExpense(null);
-  };
+  const addAction = { expenses: openExpense, suppliers: openSupplier, salary: () => navigate('/employees') }[activeTab];
 
-  const handleExpenseSuccess = () => {
-    loadData();
-    handleExpenseModalClose();
+  // Salary and stock purchases live in their own tables, so their slice of
+  // the breakdown opens the matching tab instead of filtering expense rows.
+  const handlePickCategory = (key) => {
+    if (key === 'salary') return setActiveTab('salary');
+    if (key === 'supplier_costs' && !expenses.some(e => e.category === key)) return setActiveTab('suppliers');
+    setActiveTab('expenses');
+    setCategory(prev => (prev === key ? 'all' : key));
   };
-
-  const handleAddSupplier = () => {
-    setEditingSupplier(null);
-    setSupplierModalOpen(true);
-  };
-
-  const handleEditSupplier = (supplier) => {
-    setEditingSupplier(supplier);
-    setSupplierModalOpen(true);
-  };
-
-  const handleSupplierModalClose = () => {
-    setSupplierModalOpen(false);
-    setEditingSupplier(null);
-  };
-
-  const handleSupplierSuccess = () => {
-    loadData();
-    handleSupplierModalClose();
-  };
-
-  const handleAddEmployee = () => {
-    setEditingEmployee(null);
-    setEmployeeModalOpen(true);
-  };
-
-  const handleEditEmployee = (employee) => {
-    setEditingEmployee(employee);
-    setEmployeeModalOpen(true);
-  };
-
-  const handleEmployeeModalClose = () => {
-    setEmployeeModalOpen(false);
-    setEditingEmployee(null);
-  };
-
-  const handleEmployeeSuccess = () => {
-    loadData();
-    handleEmployeeModalClose();
-  };
-
-  // Show initial loading only on first load
-  if (loading && !dataLoaded) {
-    return (
-      <Layout>
-        <PageLayout 
-          maxWidth="7xl"
-          spacing="sm"
-          className="bg-gradient-to-br from-gray-50 to-red-50/30 min-h-screen"
-        >
-          <FinanceLoading />
-        </PageLayout>
-      </Layout>
-    );
-  }
 
   return (
-    <Layout>
-      <PageLayout 
-        maxWidth="7xl"
-        spacing="sm"
-        className="bg-gradient-to-br from-gray-50 to-red-50/30 min-h-screen"
-      >
-        <div className="space-y-4">
-          {/* Header */}
-          <FinanceHeader
-            stats={stats}
-            loading={loading}
-            onAddExpense={handleAddExpense}
-            onAddSupplier={handleAddSupplier}
-            onAddEmployee={handleAddEmployee}
-            activeTab={activeTab}
-          />
-
-          {error && (
-            <Card className="p-4 bg-red-50 border-red-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                    <TrendingDown className="text-red-600" size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">Xatolik yuz berdi</h3>
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
+    <PageLayout maxWidth="full" spacing="sm" className="bg-gray-50 min-h-screen">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 m-0">Xarajatlar</h1>
+            <p className="text-sm text-gray-500 m-0">Xarajatlar, yetkazib beruvchilar va ish haqi</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+              {presets().map(p => {
+                const active = period.start === p.start && period.end === p.end;
+                return (
                   <button
-                    onClick={refreshData}
-                    disabled={loading}
-                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    key={p.label}
+                    type="button"
+                    onClick={() => setPeriod(p)}
+                    className={cn(
+                      'px-3 py-1.5 text-sm rounded-md transition-colors',
+                      active ? 'bg-white text-gray-900 font-medium shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    )}
                   >
-                    {loading ? 'Yuklanmoqda...' : 'Qayta urinish'}
+                    {p.label}
                   </button>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Stats */}
-          {loading && !dataLoaded ? (
-            <StatsSkeleton />
-          ) : (
-            <FinanceStats stats={stats} formatCurrency={formatCurrency} />
-          )}
-
-          {/* Tabs */}
-          {loading && !dataLoaded ? (
-            <TabsSkeleton />
-          ) : (
-            <FinanceTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          )}
-
-          {activeTab === 'expenses' && (
-            <ExpensesTab
-              expenses={expenses}
-              formatCurrency={formatCurrency}
-              formatDate={formatDate}
-              onAddExpense={handleAddExpense}
-              onEditExpense={handleEditExpense}
-              onDeleteExpense={handleDeleteExpense}
-              loading={loading && !dataLoaded}
-            />
-          )}
-          
-          {activeTab === 'suppliers' && (
-            <SuppliersTab
-              suppliers={suppliers}
-              formatDate={formatDate}
-              onAddSupplier={handleAddSupplier}
-              onEditSupplier={handleEditSupplier}
-              onDeleteSupplier={handleDeleteSupplier}
-              loading={loading && !dataLoaded}
-            />
-          )}
-          
-          {activeTab === 'salary' && (
-            <SalaryTab
-              employees={employees}
-              formatCurrency={formatCurrency}
-              formatDate={formatDate}
-              onAddEmployee={handleAddEmployee}
-              onEditEmployee={handleEditEmployee}
-              onDeleteEmployee={handleDeleteEmployee}
-              loading={loading && !dataLoaded}
-            />
-          )}
-
-          {/* Modals */}
-          <ExpenseModal
-            isOpen={expenseModalOpen}
-            onClose={handleExpenseModalClose}
-            expense={editingExpense}
-            onSuccess={handleExpenseSuccess}
-          />
-
-          <SupplierModal
-            isOpen={supplierModalOpen}
-            onClose={handleSupplierModalClose}
-            supplier={editingSupplier}
-            onSuccess={handleSupplierSuccess}
-          />
-
-          <EmployeeModal
-            isOpen={employeeModalOpen}
-            onClose={handleEmployeeModalClose}
-            employee={editingEmployee}
-            onSuccess={handleEmployeeSuccess}
-          />
+                );
+              })}
+            </div>
+            <Button variant="secondary" size="sm" onClick={loadData} disabled={loading} title="Yangilash" className="px-2">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button size="sm" onClick={() => addAction()}>
+              <Plus size={14} className="mr-1" /> {TAB_ACTIONS[activeTab]}
+            </Button>
+          </div>
         </div>
-      </PageLayout>
-    </Layout>
+
+        {error && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+            <span className="flex items-center gap-2"><AlertCircle size={16} /> {error}</span>
+            <button onClick={loadData} disabled={loading} className="font-medium hover:underline disabled:opacity-50">
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
+        {/* KPIs + breakdown — all for the selected period, except "Bu oy" */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+            <Kpi icon={Wallet} tone="red" label={`Jami xarajat · ${period.label}`}
+              value={formatCurrency(stats.totalExpenses)}
+              hint={`${stats.count} ta yozuv + ish haqi va xaridlar`} />
+            <Kpi icon={CalendarDays} tone="orange" label="Joriy oy"
+              value={formatCurrency(stats.monthlyExpenses)}
+              hint={`Kuniga o'rtacha ${formatCurrency(stats.monthlyExpenses / new Date().getDate())}`} />
+          </div>
+          <div className="lg:col-span-2">
+            <FinanceStats
+              stats={stats}
+              formatCurrency={formatCurrency}
+              activeCategory={activeTab === 'expenses' ? category : null}
+              onPick={handlePickCategory}
+            />
+          </div>
+        </div>
+
+        <FinanceTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          counts={{ expenses: expenses.length, suppliers: suppliers.length, salary: salaryPayments.length }}
+        />
+
+        {activeTab === 'expenses' && (
+          <ExpensesTab
+            expenses={expenses}
+            category={category}
+            onCategoryChange={setCategory}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+            onAddExpense={() => openExpense()}
+            onEditExpense={openExpense}
+            onDeleteExpense={confirmDelete('Xarajatni o\'chirish', handleDeleteExpense)}
+            loading={loading && expenses.length === 0}
+          />
+        )}
+
+        {activeTab === 'suppliers' && (
+          <SuppliersTab
+            suppliers={suppliers}
+            formatDate={formatDate}
+            onAddSupplier={() => openSupplier()}
+            onEditSupplier={openSupplier}
+            onDeleteSupplier={confirmDelete('Yetkazib beruvchini o\'chirish', handleDeleteSupplier)}
+            loading={loading && suppliers.length === 0}
+          />
+        )}
+
+        {activeTab === 'salary' && (
+          <SalaryTab
+            payments={salaryPayments}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+          />
+        )}
+
+        <ExpenseModal
+          isOpen={expenseModalOpen}
+          onClose={() => { setExpenseModalOpen(false); setEditingExpense(null); }}
+          expense={editingExpense}
+          onSuccess={() => { reloadPeriod(); setExpenseModalOpen(false); setEditingExpense(null); }}
+        />
+        <SupplierModal
+          isOpen={supplierModalOpen}
+          onClose={() => { setSupplierModalOpen(false); setEditingSupplier(null); }}
+          supplier={editingSupplier}
+          onSuccess={() => { loadData(); setSupplierModalOpen(false); setEditingSupplier(null); }}
+        />
+      </div>
+    </PageLayout>
   );
 };
 
-export default FinancePage; 
+export default FinancePage;

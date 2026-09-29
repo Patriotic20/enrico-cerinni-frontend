@@ -3,24 +3,39 @@ import { marketingAPI } from '../api/marketing';
 import { toArray } from '../utils/api';
 import { useApp } from '../contexts/AppContext';
 
+const apiErrorText = (error, fallback) =>
+  error?.response?.data?.detail || error?.response?.data?.message || fallback;
+
+// Connection checks run on every page load, so they never toast — the status
+// cards on each tab show the result instead.
+const checkStatus = async (request) => {
+  try {
+    const response = await request();
+    return response.success ? response.data : { connected: false, ...response.data, error: response.message };
+  } catch (error) {
+    return { connected: false, error: apiErrorText(error, error.message) };
+  }
+};
+
 export const useMarketing = () => {
   const { showError, showSuccess } = useApp();
-  
-  // State for marketing functionality
-  const [loading, setLoading] = useState(false);
+
+  const [loading, setLoading] = useState(true); // initial data load
+  const [sending, setSending] = useState(false);
   const [stats, setStats] = useState(null);
   const [broadcastHistory, setBroadcastHistory] = useState([]);
   const [clients, setClients] = useState([]);
   const [telegramStatus, setTelegramStatus] = useState(null);
   const [smsStatus, setSmsStatus] = useState(null);
-  
-  // Form states
+  const [smsTemplates, setSmsTemplates] = useState({ items: [], error: null, loaded: false });
+
   const [smsForm, setSmsForm] = useState({
     message: '',
+    templateId: null,
     selectedClients: [],
     sendToAll: false,
   });
-  
+
   const [telegramForm, setTelegramForm] = useState({
     message: '',
     image: null,
@@ -28,264 +43,179 @@ export const useMarketing = () => {
     sendToAll: false,
   });
 
-  // Load marketing statistics
   const loadStats = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await marketingAPI.getMarketingStats();
-      if (response.success) {
-        setStats(response.data);
-      }
+      if (response.success) setStats(response.data);
     } catch (error) {
       console.error('Error loading marketing stats:', error);
-      showError('Marketing statistikalarini yuklashda xatolik');
-    } finally {
-      setLoading(false);
     }
-  }, [showError]);
+  }, []);
 
-  // Load broadcast history
   const loadBroadcastHistory = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await marketingAPI.getBroadcastHistory();
-      if (response.success) {
-        setBroadcastHistory(toArray(response.data));
-      }
+      if (response.success) setBroadcastHistory(toArray(response.data));
     } catch (error) {
       console.error('Error loading broadcast history:', error);
-      showError('Broadcast tarixini yuklashda xatolik');
-    } finally {
-      setLoading(false);
     }
-  }, [showError]);
+  }, []);
 
-  // Load clients for marketing
   const loadClients = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await marketingAPI.getMarketingClients();
-      if (response.success) {
-        setClients(toArray(response.data));
-      }
+      if (response.success) setClients(toArray(response.data));
     } catch (error) {
       console.error('Error loading marketing clients:', error);
       showError('Mijozlarni yuklashda xatolik');
-    } finally {
-      setLoading(false);
     }
   }, [showError]);
 
-  // Test Telegram connection
-  const testTelegramConnection = useCallback(async () => {
+  const loadSmsTemplates = useCallback(async () => {
     try {
-      setLoading(true);
-      const response = await marketingAPI.testTelegramConnection();
-      if (response.success) {
-        setTelegramStatus(response.data);
-        showSuccess('Telegram bot ulanishi muvaffaqiyatli');
-      } else {
-        setTelegramStatus({ connected: false, error: response.message });
-        showError('Telegram bot ulanishi muvaffaqiyatsiz');
-      }
+      const response = await marketingAPI.getSmsTemplates();
+      setSmsTemplates({
+        items: toArray(response.data),
+        error: response.success ? null : response.message,
+        loaded: true,
+      });
     } catch (error) {
-      console.error('Error testing Telegram connection:', error);
-      setTelegramStatus({ connected: false, error: error.message });
-      showError('Telegram bot ulanishini tekshirishda xatolik');
-    } finally {
-      setLoading(false);
-    }
-  }, [showError, showSuccess]);
-
-  // Test SMS provider (Eskiz) connection
-  const testSmsConnection = useCallback(async () => {
-    try {
-      const response = await marketingAPI.testSmsConnection();
-      if (response.success) {
-        setSmsStatus(response.data);
-      } else {
-        setSmsStatus({ connected: false, error: response.message });
-      }
-    } catch (error) {
-      console.error('Error testing SMS connection:', error);
-      setSmsStatus({ connected: false, error: error.message });
+      setSmsTemplates({ items: [], error: apiErrorText(error, error.message), loaded: true });
     }
   }, []);
+
+  // Returns names of clients newly linked to the bot (they pressed Start).
+  const syncTelegramLinks = useCallback(async () => {
+    try {
+      const response = await marketingAPI.syncTelegramLinks();
+      const linked = response.success ? toArray(response.data) : [];
+      if (linked.length) {
+        showSuccess(`Telegramga ulandi: ${linked.join(', ')}`);
+        loadClients();
+        loadStats();
+      }
+      return response.success ? linked : null;
+    } catch (error) {
+      console.error('Error syncing Telegram links:', error);
+      return null;
+    }
+  }, [showSuccess, loadClients, loadStats]);
+
+  const testTelegramConnection = useCallback(async () => {
+    setTelegramStatus(null);
+    const status = await checkStatus(marketingAPI.testTelegramConnection);
+    setTelegramStatus(status);
+    if (status.connected) syncTelegramLinks();
+  }, [syncTelegramLinks]);
+
+  const testSmsConnection = useCallback(async () => {
+    setSmsStatus(null);
+    const status = await checkStatus(marketingAPI.testSmsConnection);
+    setSmsStatus(status);
+    if (status.connected) loadSmsTemplates();
+    else setSmsTemplates({ items: [], error: null, loaded: true });
+  }, [loadSmsTemplates]);
 
   // The API answers success even when the provider rejected messages, so
   // inspect per-channel counters to give the user an honest result.
-  const summarizeBroadcast = useCallback((data, channel) => {
-    const result = (data?.results || []).find(r => r.channel === channel);
-    if (!result) return { ok: true, text: '' };
-    if (result.failed > 0) {
-      const reason = result.errors?.[0] ? ` Sabab: ${result.errors[0]}` : '';
-      return {
-        ok: result.sent > 0,
-        text: `Yuborildi: ${result.sent} ta, xatolik: ${result.failed} ta.${reason}`,
-      };
-    }
-    return { ok: true, text: `Yuborildi: ${result.sent} ta` };
-  }, []);
-
-  // Send SMS broadcast
-  const sendSMSBroadcast = useCallback(async (data) => {
+  const sendBroadcast = useCallback(async (request, data, channel, label) => {
+    setSending(true);
     try {
-      setLoading(true);
-      const response = await marketingAPI.sendSMSBroadcast(data);
-      if (response.success) {
-        const summary = summarizeBroadcast(response.data, 'sms');
-        if (summary.ok && !summary.text.includes('xatolik')) {
-          showSuccess(`SMS xabar muvaffaqiyatli yuborildi. ${summary.text}`);
-        } else {
-          showError(`SMS to'liq yuborilmadi. ${summary.text}`);
-        }
-        await loadBroadcastHistory(); // Refresh history
-        return summary.ok;
-      } else {
-        showError(response.message || 'SMS yuborishda xatolik');
+      const response = await request(data);
+      if (!response.success) {
+        showError(response.message || `${label} yuborishda xatolik`);
         return false;
       }
-    } catch (error) {
-      console.error('Error sending SMS broadcast:', error);
-      showError('SMS yuborishda xatolik yuz berdi');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [showError, showSuccess, loadBroadcastHistory, summarizeBroadcast]);
-
-  // Send Telegram broadcast
-  const sendTelegramBroadcast = useCallback(async (data) => {
-    try {
-      setLoading(true);
-      const response = await marketingAPI.sendTelegramBroadcast(data);
-      if (response.success) {
-        const summary = summarizeBroadcast(response.data, 'telegram');
-        if (summary.ok && !summary.text.includes('xatolik')) {
-          showSuccess(`Telegram xabar muvaffaqiyatli yuborildi. ${summary.text}`);
-        } else {
-          showError(`Telegram to'liq yuborilmadi. ${summary.text}`);
-        }
-        await loadBroadcastHistory(); // Refresh history
-        return summary.ok;
+      const result = (response.data?.results || []).find(r => r.channel === channel);
+      const sent = result?.sent ?? 0;
+      const failed = result?.failed ?? 0;
+      if (!result || result.attempted === 0) {
+        showError(`${label}: tanlangan mijozlarda ${channel === 'sms' ? 'telefon raqami' : 'Telegram'} yo'q`);
+      } else if (failed > 0) {
+        const reason = result.errors?.[0] ? ` Sabab: ${result.errors[0]}` : '';
+        showError(`${label}: yuborildi ${sent} ta, xatolik ${failed} ta.${reason}`);
       } else {
-        showError(response.message || 'Telegram xabar yuborishda xatolik');
-        return false;
+        showSuccess(`${label} yuborildi: ${sent} ta`);
       }
+      loadBroadcastHistory();
+      loadStats();
+      return sent > 0;
     } catch (error) {
-      console.error('Error sending Telegram broadcast:', error);
-      showError('Telegram xabar yuborishda xatolik yuz berdi');
+      console.error(`Error sending ${channel} broadcast:`, error);
+      showError(apiErrorText(error, `${label} yuborishda xatolik yuz berdi`));
       return false;
     } finally {
-      setLoading(false);
+      setSending(false);
     }
-  }, [showError, showSuccess, loadBroadcastHistory, summarizeBroadcast]);
+  }, [showError, showSuccess, loadBroadcastHistory, loadStats]);
 
-  // Validate SMS form
-  const validateSmsForm = () => {
-    if (!smsForm.message.trim()) {
-      showError('Xabar matni kiritilmagan');
-      return false;
-    }
-    
-    if (!smsForm.sendToAll && smsForm.selectedClients.length === 0) {
-      showError('Kamida bitta mijoz tanlanishi kerak');
-      return false;
-    }
-    
-    return true;
-  };
+  const hasRecipients = (form) => form.sendToAll || form.selectedClients.length > 0;
 
-  // Validate Telegram form
-  const validateTelegramForm = () => {
-    if (!telegramForm.message.trim()) {
-      showError('Xabar matni kiritilmagan');
-      return false;
-    }
-    
-    if (!telegramForm.sendToAll && telegramForm.selectedClients.length === 0) {
-      showError('Kamida bitta mijoz tanlanishi kerak');
-      return false;
-    }
-    
-    return true;
-  };
-
-  // Handle SMS broadcast
   const handleSMSBroadcast = async () => {
-    if (!validateSmsForm()) return;
+    if (!smsForm.templateId || !smsForm.message.trim()) {
+      showError('Bitta SMS shablonini tanlang');
+      return;
+    }
+    if (!hasRecipients(smsForm)) {
+      showError('Kamida bitta mijoz tanlanishi kerak');
+      return;
+    }
 
-    const broadcastData = {
+    const ok = await sendBroadcast(marketingAPI.sendSMSBroadcast, {
       message: smsForm.message.trim(),
       client_ids: smsForm.sendToAll ? [] : smsForm.selectedClients,
       send_to_all: smsForm.sendToAll,
-    };
-
-    const success = await sendSMSBroadcast(broadcastData);
-    if (success) {
-      // Reset form
-      setSmsForm({
-        message: '',
-        selectedClients: [],
-        sendToAll: false,
-      });
-    }
+    }, 'sms', 'SMS');
+    if (ok) setSmsForm({ message: '', templateId: null, selectedClients: [], sendToAll: false });
   };
 
-  // Handle Telegram broadcast
   const handleTelegramBroadcast = async () => {
-    if (!validateTelegramForm()) return;
+    if (!telegramForm.message.trim()) {
+      showError('Xabar matni kiritilmagan');
+      return;
+    }
+    if (!hasRecipients(telegramForm)) {
+      showError('Kamida bitta mijoz tanlanishi kerak');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('message', telegramForm.message.trim());
     formData.append('client_ids', JSON.stringify(telegramForm.sendToAll ? [] : telegramForm.selectedClients));
     formData.append('send_to_all', telegramForm.sendToAll);
-    
-    if (telegramForm.image) {
-      formData.append('image', telegramForm.image);
-    }
+    if (telegramForm.image) formData.append('image', telegramForm.image);
 
-    const success = await sendTelegramBroadcast(formData);
-    if (success) {
-      // Reset form
-      setTelegramForm({
-        message: '',
-        image: null,
-        selectedClients: [],
-        sendToAll: false,
-      });
-    }
+    const ok = await sendBroadcast(marketingAPI.sendTelegramBroadcast, formData, 'telegram', 'Telegram xabar');
+    if (ok) setTelegramForm({ message: '', image: null, selectedClients: [], sendToAll: false });
   };
 
-  // Load initial data
   useEffect(() => {
-    loadStats();
-    loadBroadcastHistory();
-    loadClients();
+    Promise.all([loadStats(), loadBroadcastHistory(), loadClients()]).finally(() => setLoading(false));
     testTelegramConnection();
     testSmsConnection();
   }, [loadStats, loadBroadcastHistory, loadClients, testTelegramConnection, testSmsConnection]);
 
   return {
-    // State
     loading,
+    sending,
     stats,
     broadcastHistory,
     clients,
     telegramStatus,
     smsStatus,
+    smsTemplates,
     smsForm,
     telegramForm,
 
-    // Actions
     setSmsForm,
     setTelegramForm,
     handleSMSBroadcast,
     handleTelegramBroadcast,
     testTelegramConnection,
     testSmsConnection,
+    syncTelegramLinks,
     loadStats,
     loadBroadcastHistory,
     loadClients,
   };
-}; 
+};

@@ -136,7 +136,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Check if we use token storage and the request is not already a refresh attempt
       // Login/logout 401s are real answers (bad password, dead session), not expired tokens
-      const isAuthCall = /\/auth\/(refresh|login|logout)/.test(originalRequest.url || '');
+      const isAuthCall = /\/auth\/(refresh|login|pin-login|logout)/.test(originalRequest.url || '');
       if (AUTH_STORAGE_TYPE !== 'cookie' && originalRequest.url && !isAuthCall) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
@@ -187,8 +187,8 @@ api.interceptors.response.use(
           processQueue(refreshError, null);
           isRefreshing = false;
           clearStoredTokens();
-          // Redirect to login page
-          window.location.href = '/login';
+          // Redirect to the login page of the app we're in (seller app lives under /m)
+          window.location.href = /^\/m(\/|$)/.test(window.location.pathname) ? '/m/login' : '/login';
           return Promise.reject(handleApiError(error));
         }
       }

@@ -27,6 +27,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const EmployeeDetailPage = lazy(() => import('./pages/EmployeeDetailPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+// Seller mobile app: own login (phone + PIN), own layout, under /m
+const SellerApp = lazy(() => import('./pages/SellerApp'));
 
 const FullScreenLoader = () => (
   <div style={{
@@ -50,6 +52,11 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Seller accounts only work in the mobile app.
+  if (user.role === 'seller') {
+    return <Navigate to="/m" replace />;
   }
 
   return children;
@@ -85,6 +92,7 @@ const App = () => {
                 <Routes>
                   {/* Public Route */}
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/m/*" element={<SellerApp />} />
 
                   {/* Protected Routes */}
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />

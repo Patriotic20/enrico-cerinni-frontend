@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth';
+import { sellerAPI } from '../api/seller';
 import { getApiErrorMessage } from '../utils/api';
 import { AUTH_STORAGE_TYPE, setStoredTokens, clearStoredTokens, getStoredAccessToken } from '../api/client';
 
@@ -48,12 +49,14 @@ export const useAuth = () => {
     }
   };
 
-  const login = async (email, password) => {
+  // signIn: back office (email + password) and seller app (phone + PIN) share
+  // everything after the credentials check.
+  const signIn = async (request) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await authAPI.login(email, password);
+      const response = await request();
       
       if (response && response.success) {
         // Save tokens if we are using storage mode
@@ -99,6 +102,9 @@ export const useAuth = () => {
     }
   };
 
+  const login = (email, password) => signIn(() => authAPI.login(email, password));
+  const pinLogin = (phone, pin) => signIn(() => sellerAPI.pinLogin(phone, pin));
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -113,7 +119,7 @@ export const useAuth = () => {
       setUser(null);
       setError(null);
       setLoading(false);
-      navigate('/login');
+      navigate(user?.role === 'seller' ? '/m/login' : '/login');
     }
   };
 
@@ -132,6 +138,7 @@ export const useAuth = () => {
     loading,
     error,
     login,
+    pinLogin,
     logout,
     isAuthenticated,
     refreshAuth,

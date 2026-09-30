@@ -1,0 +1,10 @@
+{
+  "name": "Enrico — Sotuvchi",
+  "short_name": "Sotuvchi",
+  "start_url": "/m",
+  "scope": "/m",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

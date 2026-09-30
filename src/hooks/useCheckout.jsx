@@ -33,6 +33,8 @@ export const useCheckout = () => {
   const [sellers, setSellers] = useState([]);
   const [sellerId, setSellerId] = useState(null);
   const [sellerError, setSellerError] = useState(false);
+  // Set when the ticket came from a seller's phone (see loadCart).
+  const [cartId, setCartId] = useState(null);
 
   useEffect(() => {
     employeesAPI.getSellers()
@@ -194,6 +196,7 @@ export const useCheckout = () => {
       let saleData = {
         client_id: selectedClient ? selectedClient.id : null,
         seller_id: sellerId,
+        cart_id: cartId,
         total_amount: total_amount,
         discount_amount: discount_amount,
         final_amount: final_amount,
@@ -234,6 +237,7 @@ export const useCheckout = () => {
 
   const resetForm = () => {
     cart.clearCart();
+    setCartId(null);
     setClientName('');
     setClientPhone('');
     setCurrentSale(null);
@@ -253,6 +257,42 @@ export const useCheckout = () => {
     setClientPhone(client.phone || '');
   };
 
+  // Load a seller's cart onto the ticket. Its units are reserved (already out
+  // of stock), so they count as available for this ticket. The seller pick
+  // isn't remembered: it belongs to this cart only.
+  const loadCart = async (sellerCart) => {
+    cart.setCart(sellerCart.items.map(i => {
+      const price = Math.round(i.price);
+      return {
+        id: i.product_variant_id,
+        variant_id: i.product_variant_id,
+        product_id: i.product_id,
+        name: i.product_name,
+        sku: i.sku,
+        image_url: i.image_url,
+        color_name: i.color_name,
+        color_hex: i.color_hex,
+        size_name: i.size_name,
+        price,
+        basePrice: price,
+        quantity: i.quantity,
+        stock_quantity: i.stock_quantity + i.quantity,
+      };
+    }));
+    setSellerId(sellerCart.seller_id);
+    setSellerError(false);
+    setCartId(sellerCart.id);
+    setSelectedClient(null);
+    if (sellerCart.client_id) {
+      try {
+        const res = await clientsAPI.getClient(sellerCart.client_id);
+        if (res.success && res.data) selectClient(res.data);
+      } catch (error) {
+        logger.error('Error loading cart client:', error);
+      }
+    }
+  };
+
   return {
     // Cart state and actions
     ...cart,
@@ -268,6 +308,9 @@ export const useCheckout = () => {
     sellerId,
     sellerError,
     selectSeller,
+    cartId,
+    setCartId,
+    loadCart,
     showReceipt,
     clientName,
     clientPhone,

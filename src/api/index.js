@@ -6,6 +6,7 @@ export { dashboardAPI } from './dashboard';
 export { settingsAPI } from './settings';
 export { financeAPI } from './finance';
 export { employeesAPI } from './employees';
+export { sellerAPI, cartsAPI } from './seller';
 export { marketingAPI } from './marketing';
 export { sizesAPI } from './sizes';
 export { productVariantsAPI } from './productVariants';

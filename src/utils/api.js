@@ -74,6 +74,13 @@ const BACKEND_MESSAGE_UZ = {
   'User account is disabled': "Hisob o'chirilgan. Administratorga murojaat qiling",
   'Invalid email format': "Email formati noto'g'ri",
   'Current password is incorrect': "Joriy parol noto'g'ri",
+  'Incorrect phone or PIN': "Telefon yoki PIN noto'g'ri",
+  'Seller access disabled': "Kirish o'chirilgan. Administratorga murojaat qiling",
+  'Cart is no longer pending': "Savat allaqachon yopilgan (to'langan yoki bekor qilingan)",
+  'Cart not found': 'Savat topilmadi',
+  'Client with this phone already exists': 'Bu telefon raqamli mijoz allaqachon bor',
+  'Employee needs a phone number for mobile access': 'Mobil kirish uchun xodim telefoni kerak',
+  'Another seller already uses this phone number': 'Bu telefon raqami boshqa sotuvchiga biriktirilgan',
   'Internal server error':
     'Serverda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko\'ring.',
 };

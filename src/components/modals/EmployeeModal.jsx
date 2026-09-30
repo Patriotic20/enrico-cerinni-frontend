@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Users, DollarSign, Calendar, Phone, Mail, Target, Percent } from 'lucide-react';
+import { Users, DollarSign, Calendar, Phone, Mail, Target, Percent, KeyRound } from 'lucide-react';
+import { getApiErrorMessage } from '../../utils/api';
 import { financeAPI } from '../../api/finance';
 import Modal from './Modal';
 import toast from 'react-hot-toast';
@@ -17,6 +18,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
     is_seller: true,
     commission_rate: '',
     monthly_target: '',
+    pin: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         is_seller: employee.is_seller ?? true,
         commission_rate: employee.commission_rate ? String(employee.commission_rate) : '',
         monthly_target: employee.monthly_target ? String(employee.monthly_target) : '',
+        pin: '',
       });
     } else {
       setFormData({
@@ -50,6 +53,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         is_seller: true,
         commission_rate: '',
         monthly_target: '',
+        pin: '',
       });
     }
     setErrors({});
@@ -91,6 +95,10 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
       newErrors.monthly_target = 'Manfiy bo\'lmasin';
     }
 
+    if (formData.pin && !/^\d{4,6}$/.test(formData.pin)) {
+      newErrors.pin = '4–6 ta raqam';
+    }
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'To\'g\'ri email manzilini kiriting';
     }
@@ -122,6 +130,8 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
         is_seller: formData.is_seller,
         commission_rate: formData.is_seller ? parseFloat(formData.commission_rate || 0) : 0,
         monthly_target: formData.is_seller ? parseFloat(formData.monthly_target || 0) : 0,
+        // Only sent when typed: an empty field keeps the current PIN.
+        ...(formData.is_seller && formData.pin ? { pin: formData.pin } : {}),
       };
 
       if (employee) {
@@ -135,7 +145,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
       onSuccess();
     } catch (error) {
       console.error('Error saving employee:', error);
-      toast.error('Xodimni saqlashda xatolik yuz berdi');
+      toast.error(getApiErrorMessage(error, 'Xodimni saqlashda xatolik yuz berdi'));
     } finally {
       setLoading(false);
     }
@@ -362,6 +372,28 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
                   }`}
                 />
                 {errors.monthly_target && <span className="text-red-600 text-xs mt-0.5 block">{errors.monthly_target}</span>}
+              </div>
+              <div className="col-span-2">
+                <label htmlFor="pin" className="flex items-center gap-1.5 text-xs font-medium text-gray-700 mb-1">
+                  <KeyRound size={14} className="text-blue-500" />
+                  Mobil ilova PIN (/m)
+                </label>
+                <input
+                  type="password"
+                  id="pin"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  maxLength={6}
+                  value={formData.pin}
+                  onChange={(e) => handleInputChange('pin', e.target.value.replace(/\D/g, ''))}
+                  placeholder={employee ? "Bo'sh — o'zgarmaydi" : '4–6 raqam, ixtiyoriy'}
+                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500 transition-colors ${
+                    errors.pin ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {errors.pin
+                  ? <span className="text-red-600 text-xs mt-0.5 block">{errors.pin}</span>
+                  : <span className="text-gray-500 text-xs mt-0.5 block">Sotuvchi telefon raqami + shu PIN bilan kiradi</span>}
               </div>
             </div>
           )}

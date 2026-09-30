@@ -3,6 +3,7 @@ import { Minus, Plus, Trash2, ShoppingCart, ScanBarcode, Pencil } from 'lucide-r
 import { formatCurrency } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import PriceKeypadModal from './PriceKeypadModal';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 export default function CartItems({
   cart,
@@ -11,6 +12,7 @@ export default function CartItems({
   removeFromCart,
   clearCart
 }) {
+  const confirm = useConfirm();
   const [editingId, setEditingId] = useState(null);
   const editing = cart.find(i => i.id === editingId) || null;
   const units = cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
@@ -30,7 +32,7 @@ export default function CartItems({
         {cart.length > 0 && clearCart && (
           <button
             type="button"
-            onClick={() => window.confirm("Savatni tozalaysizmi?") && clearCart()}
+            onClick={async () => (await confirm({ title: 'Savatni tozalash', message: 'Savatni tozalaysizmi?', confirmText: 'Ha, tozalash' })) && clearCart()}
             className="h-10 px-3 flex items-center gap-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-100"
           >
             <Trash2 size={16} /> Tozalash
@@ -79,7 +81,7 @@ export default function CartItems({
                   <button
                     type="button"
                     aria-label="O'chirish"
-                    className="-mr-1 w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 active:bg-red-100"
+                    className="-mr-1 w-11 h-11 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 active:bg-red-100"
                     onClick={() => removeFromCart(item.id)}
                   >
                     <Trash2 size={20} />
@@ -97,7 +99,7 @@ export default function CartItems({
                   >
                     <span className="min-w-0">
                       {changed && (
-                        <span className="block text-xs text-gray-400 line-through tabular-nums leading-none">
+                        <span className="block text-xs text-gray-500 line-through tabular-nums leading-none">
                           {formatCurrency(base)}
                         </span>
                       )}
@@ -105,7 +107,7 @@ export default function CartItems({
                         {formatCurrency(price)}
                       </span>
                     </span>
-                    <Pencil size={16} className="text-gray-400 shrink-0" />
+                    <Pencil size={16} className="text-gray-500 shrink-0" />
                   </button>
 
                   <div className="flex items-center h-12 w-[136px] shrink-0 rounded-xl border-2 border-gray-200 overflow-hidden">

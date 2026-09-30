@@ -14,7 +14,7 @@ const Tile = ({ icon: Icon, label, value, hint, warn, to }) => {
         <div className="text-xs text-gray-500 truncate">{label}</div>
         <div className="text-lg font-semibold text-gray-900 truncate">{value}</div>
         {hint && (
-          <div className={cn('text-xs truncate', warn ? 'text-amber-600 font-medium' : 'text-gray-400')}>
+          <div className={cn('text-xs truncate', warn ? 'text-amber-600 font-medium' : 'text-gray-500')}>
             {hint}
           </div>
         )}

@@ -55,7 +55,8 @@ const PageLayout = ({
   return (
     <div
       className={cn(
-        'w-full mx-auto px-4 sm:px-6 lg:px-8 py-6',
+        // Gutter comes from Layout; padding here doubled it on phones
+        'w-full mx-auto',
         maxWidthClasses[maxWidth],
         spacingClasses[spacing],
         className
@@ -121,7 +122,7 @@ const BreadcrumbItem = ({ children, href, isLast = false, ...props }) => (
     )}
     {!isLast && (
       <svg
-        className="flex-shrink-0 h-4 w-4 text-gray-400 mx-2"
+        className="flex-shrink-0 h-4 w-4 text-gray-500 mx-2"
         fill="currentColor"
         viewBox="0 0 20 20"
         xmlns="http://www.w3.org/2000/svg"

@@ -32,7 +32,7 @@ const Header = ({ onMenuClick, className, ...props }) => {
       '/settings/sizes': 'O\'lchamlarni boshqarish',
       '/settings/seasons': 'Fasllarni boshqarish',
       '/inventory/': 'Mahsulot tafsilotlari',
-      '/sales': 'Moliya',
+      '/sales': 'Sotuvlar',
     };
 
     for (const [route, title] of Object.entries(routeMap)) {
@@ -45,7 +45,7 @@ const Header = ({ onMenuClick, className, ...props }) => {
   return (
     <header 
       className={cn(
-        'px-4 sm:px-6 py-3',
+        'px-4 sm:px-6 py-3 bg-white/90 backdrop-blur border-b border-gray-200',
         'flex items-center justify-between',
         'sticky top-0 z-40',
         // Only holds the mobile menu toggle; hidden on desktop so it doesn't eat vertical space

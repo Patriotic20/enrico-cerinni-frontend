@@ -36,28 +36,22 @@ export const useCart = () => {
   }, []);
 
   const updateQuantity = useCallback((productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      setCart(cart.filter(item => item.id !== productId));
-    } else {
-      setCart(cart.map(item =>
-        item.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      ));
-    }
-  }, [cart]);
+    setCart(items => newQuantity <= 0
+      ? items.filter(item => item.id !== productId)
+      : items.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item));
+  }, []);
 
   const updatePrice = useCallback((productId, newPrice) => {
-    setCart(cart.map(item =>
+    setCart(items => items.map(item =>
       item.id === productId
         ? { ...item, price: Math.max(0, Math.round(parseFloat(newPrice) || 0)) }
         : item
     ));
-  }, [cart]);
+  }, []);
 
   const removeFromCart = useCallback((productId) => {
-    setCart(cart.filter(item => item.id !== productId));
-  }, [cart]);
+    setCart(items => items.filter(item => item.id !== productId));
+  }, []);
 
   const clearCart = useCallback(() => {
     setCart([]);

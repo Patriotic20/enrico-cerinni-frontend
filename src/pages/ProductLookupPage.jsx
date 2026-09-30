@@ -19,21 +19,21 @@ import { toArray } from '../utils/api';
 import { useProductSearch } from '../hooks/useProductSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { isStaff, SEARCH_CONFIG } from '../utils/constants';
-import { formatNumber } from '../utils/format';
+import { formatCurrency } from '../utils/format';
 import { variantStockStatus } from '../utils/stock';
 import { cn } from '../utils/cn';
+import { isBarcode } from '../utils/barcode';
 
 // ponytail: native BarcodeDetector (Chrome/Android/Edge). iOS Safari lacks it —
 // camera button hides there; add a JS decoder (e.g. zxing) if iPhones matter.
 const CAN_SCAN = typeof window !== 'undefined' && 'BarcodeDetector' in window;
-const BARCODE_RE = /^[A-Za-z0-9-]{6,}$/;
 
-const money = (n) => `${formatNumber(Math.round(Number(n) || 0))} so'm`;
+const money = formatCurrency;
 
 const STOCK_STYLE = {
   ok: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   low: 'bg-amber-50 text-amber-700 ring-amber-200',
-  out: 'bg-gray-100 text-gray-400 ring-gray-200 line-through',
+  out: 'bg-gray-100 text-gray-500 ring-gray-200 line-through',
 };
 
 const summarize = (product) => {
@@ -151,7 +151,7 @@ const ProductCard = ({ product, open, onToggle, highlightSku, staff }) => {
           )}>
             {stock} dona
           </span>
-          <ChevronDown size={20} className={cn('text-gray-400 transition-transform', open && 'rotate-180')} />
+          <ChevronDown size={20} className={cn('text-gray-500 transition-transform', open && 'rotate-180')} />
         </div>
       </button>
 
@@ -237,6 +237,18 @@ const ProductLookupPage = () => {
       .catch(() => setBrands([]));
   }, []);
 
+  // Hardware scanners type into whatever has focus. After tapping a card the
+  // input is blurred, so pull stray keystrokes back into it.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      inputRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Brand chip picked: list that brand's products, narrowed by the typed text.
   useEffect(() => {
     if (!brandId) return;
@@ -273,6 +285,13 @@ const ProductLookupPage = () => {
   const lookupCode = async (code) => {
     setScanning(false);
     setLookingUp(true);
+    // Partial SKU typed by hand already has text-search matches on screen.
+    const notFound = () => {
+      if (!(searchTerm.trim() === code && searchResults.length)) {
+        toast.error('Bu kod bo\'yicha mahsulot topilmadi');
+      }
+      setSearchTerm(code);
+    };
     try {
       const res = await productsAPI.getProductByBarcode(code);
       if (res.success && res.data) {
@@ -281,12 +300,10 @@ const ProductLookupPage = () => {
         setOpenId(res.data.id);
         setSearchTerm('');
       } else {
-        toast.error('Bu kod bo\'yicha mahsulot topilmadi');
-        setSearchTerm(code);
+        notFound();
       }
     } catch {
-      toast.error('Bu kod bo\'yicha mahsulot topilmadi');
-      setSearchTerm(code);
+      notFound();
     } finally {
       setLookingUp(false);
       inputRef.current?.select();
@@ -297,7 +314,7 @@ const ProductLookupPage = () => {
   const onKeyDown = (e) => {
     if (e.key !== 'Enter') return;
     const code = searchTerm.trim();
-    if (BARCODE_RE.test(code) && /\d/.test(code)) lookupCode(code);
+    if (isBarcode(code)) lookupCode(code);
     else if (list[0]) setOpenId(list[0].id);
   };
 
@@ -317,11 +334,11 @@ const ProductLookupPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-3xl pb-24">
-      <div className="sticky top-0 z-20 -mx-4 bg-gradient-to-b from-gray-50 via-gray-50 to-gray-50/0 px-4 pb-4 pt-2 sm:mx-0 sm:px-0">
+      <div className="sticky top-14 md:top-0 z-20 -mx-4 bg-gradient-to-b from-gray-50 via-gray-50 to-gray-50/0 px-4 pb-4 pt-2 sm:mx-0 sm:px-0">
         <h1 className="mb-3 text-2xl font-bold text-gray-900">Mahsulot qidirish</h1>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               ref={inputRef}
               type="search"
@@ -338,7 +355,7 @@ const ProductLookupPage = () => {
             {busy ? (
               <Loader2 size={22} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-blue-500" />
             ) : (searchTerm || scanned || brandId) && (
-              <button onClick={reset} aria-label="Tozalash" className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 active:bg-gray-100">
+              <button onClick={reset} aria-label="Tozalash" className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 active:bg-gray-100">
                 <X size={22} />
               </button>
             )}

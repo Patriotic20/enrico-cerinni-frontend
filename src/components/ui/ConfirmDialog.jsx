@@ -16,6 +16,7 @@
  * />
  */
 
+import { openLayer, closeLayer, isTopLayer } from '../../utils/modalStack';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2, Info, HelpCircle } from 'lucide-react';
@@ -67,7 +68,9 @@ const ConfirmDialog = ({
   useEffect(() => {
     if (!isOpen) return undefined;
 
+    const layer = openLayer();
     const handleKeyDown = (e) => {
+      if (!isTopLayer(layer)) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onCancel?.();
@@ -78,7 +81,6 @@ const ConfirmDialog = ({
     };
 
     previousFocusRef.current = document.activeElement;
-    document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleKeyDown);
 
     // Focus the confirm action so keyboard users land on it immediately.
@@ -86,7 +88,7 @@ const ConfirmDialog = ({
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
+      closeLayer(layer);
       previousFocusRef.current?.focus?.();
     };
   }, [isOpen, onCancel, onConfirm]);

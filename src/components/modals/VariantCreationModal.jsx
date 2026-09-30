@@ -212,12 +212,12 @@ export default function VariantCreationModal({
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Zapas miqdori</label>
+                <label className="block text-sm font-medium text-gray-700">Qoldiq miqdori</label>
                 <input
                   type="number"
                   value={baseStockQuantity}
                   onChange={(e) => setBaseStockQuantity(e.target.value)}
-                  placeholder="Zapas miqdorini kiriting"
+                  placeholder="Qoldiq miqdorini kiriting"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />

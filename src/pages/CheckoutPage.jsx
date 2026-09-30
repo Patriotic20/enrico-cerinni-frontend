@@ -35,8 +35,9 @@ const TicketPanel = ({ checkout }) => {
   const owing = [PAYMENT_METHODS.PARTIAL, PAYMENT_METHODS.DEBT].includes(checkout.paymentMethod) && total > 0;
   const needType = checkout.cart.length > 0 && checkout.paymentMethod !== PAYMENT_METHODS.DEBT && !checkout.payType;
   const disabled = checkout.cart.length === 0 || checkout.loading || needType;
+  // % width on small laptops/tablets so the product column isn't squeezed to ~270px
   return (
-    <aside className="lg:w-[500px] xl:w-[540px] shrink-0 flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <aside className="lg:w-[45%] xl:w-[500px] 2xl:w-[540px] shrink-0 flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm lg:overflow-hidden">
       <div className="p-4 space-y-3 border-b border-gray-100">
         <SellerSection
           sellers={checkout.sellers}
@@ -60,7 +61,8 @@ const TicketPanel = ({ checkout }) => {
         clearCart={checkout.clearCart}
       />
 
-      <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+      {/* Stacked layout (< lg): keep payment + pay button pinned while the cart scrolls by */}
+      <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:rounded-b-2xl">
         <PaymentSection
           paymentMethod={checkout.paymentMethod}
           setPaymentMethod={checkout.setPaymentMethod}
@@ -116,6 +118,7 @@ const CheckoutContent = () => {
             addToCart={checkout.addToCart}
             addManyToCart={checkout.addManyToCart}
             onBarcodeScan={checkout.handleBarcodeScan}
+            onSearch={checkout.searchProducts}
           />
         </section>
         <TicketPanel checkout={checkout} />

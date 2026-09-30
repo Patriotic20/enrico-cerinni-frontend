@@ -71,7 +71,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <h1 className="m-0 text-sm font-bold text-gray-900 truncate">Enrico Cerrini</h1>
           </div>
           <button
-            className="bg-transparent border-none text-gray-400 cursor-pointer p-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-600 md:hidden"
+            className="bg-transparent border-none text-gray-500 cursor-pointer p-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-600 md:hidden"
             onClick={onClose}
             aria-label="Yopish"
           >
@@ -83,7 +83,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {groups.map((group) => (
             <div key={group.label || 'main'}>
               {group.label && (
-                <div className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                <div className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                   {group.label}
                 </div>
               )}
@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                       {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-blue-600" />}
                       <Icon
                         size={18}
-                        className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}
+                        className={active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-600'}
                       />
                       <span className="truncate">{item.name}</span>
                     </Link>
@@ -129,7 +129,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               <span className="block text-[11px] text-gray-500 truncate">{ROLE_LABELS[user?.role] || user?.email}</span>
             </div>
             <button
-              className="p-1.5 rounded-lg text-gray-400 bg-transparent border-none cursor-pointer hover:bg-red-50 hover:text-red-600 transition-colors shrink-0"
+              className="p-1.5 rounded-lg text-gray-500 bg-transparent border-none cursor-pointer hover:bg-red-50 hover:text-red-600 transition-colors shrink-0"
               onClick={logout}
               title="Chiqish"
               aria-label="Chiqish"

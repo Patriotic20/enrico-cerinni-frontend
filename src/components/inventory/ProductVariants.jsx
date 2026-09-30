@@ -134,7 +134,7 @@ export default function ProductVariants({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         {header}
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Package size={24} className="text-gray-400 mb-3" />
+          <Package size={24} className="text-gray-500 mb-3" />
           <p className="text-sm text-gray-600">Bu mahsulot uchun variantlar mavjud emas</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function ProductVariants({
       {/* Stock matrix */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Zapas: rang × o'lcham</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Qoldiq: rang × o'lcham</h3>
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-300" /> Kam</span>
             <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-300" /> Tugagan</span>
@@ -209,7 +209,7 @@ export default function ProductVariants({
                 <th className="py-2 pr-3 font-medium text-right">Narx</th>
                 <th className="py-2 pr-3 font-medium text-right">Tannarx</th>
                 <th className="py-2 pr-3 font-medium text-right">Marja</th>
-                <th className="py-2 pr-3 font-medium text-right">Zapas</th>
+                <th className="py-2 pr-3 font-medium text-right">Qoldiq</th>
                 <th className="py-2 pr-3 font-medium text-right">Min</th>
                 <th className="py-2 w-20" />
               </tr>
@@ -243,7 +243,7 @@ export default function ProductVariants({
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">
                       {editing
-                        ? <input type="number" min="0" value={editData.stock_quantity ?? ''} onChange={setField('stock_quantity', v => parseInt(v, 10))} className={`${numInput} w-20`} aria-label="Zapas" />
+                        ? <input type="number" min="0" value={editData.stock_quantity ?? ''} onChange={setField('stock_quantity', v => parseInt(v, 10))} className={`${numInput} w-20`} aria-label="Qoldiq" />
                         : <span className="flex items-center justify-end gap-2"><StockBadge variant={variant} /><span className="font-medium">{variant.stock_quantity}</span></span>}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-gray-500">

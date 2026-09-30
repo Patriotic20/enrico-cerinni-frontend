@@ -277,7 +277,7 @@ const ProductVariantForm = ({
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Narx</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tannarx</th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Zapas</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qoldiq</th>
                       <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">Min</th>
                     </tr>
                   </thead>

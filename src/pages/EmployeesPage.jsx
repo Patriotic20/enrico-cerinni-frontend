@@ -196,7 +196,7 @@ export default function EmployeesPage() {
                                 <td className="px-3 py-2.5 text-right tabular-nums text-gray-700">{k.items_sold}</td>
                                 <td className="px-3 py-2.5">
                                   {k.target_pct == null ? (
-                                    <span className="text-xs text-gray-400">Reja yo'q</span>
+                                    <span className="text-xs text-gray-500">Reja yo'q</span>
                                   ) : (
                                     <div title={`${formatCurrency(k.revenue)} / ${formatCurrency(k.target)}`}>
                                       <div className="text-xs text-gray-700 tabular-nums mb-1">{Math.round(k.target_pct)}%</div>
@@ -206,16 +206,16 @@ export default function EmployeesPage() {
                                 </td>
                                 <td className="px-3 py-2.5 text-right tabular-nums whitespace-nowrap">
                                   <div className="text-green-700 font-medium">{formatCurrency(k.commission)}</div>
-                                  <div className="text-xs text-gray-400">{k.commission_rate}%</div>
+                                  <div className="text-xs text-gray-500">{k.commission_rate}%</div>
                                 </td>
                                 <td className="px-3 py-2.5 text-right tabular-nums text-xs">
-                                  <span className={k.debt_sales ? 'text-orange-600' : 'text-gray-400'}>{k.debt_sales}</span>
+                                  <span className={k.debt_sales ? 'text-orange-600' : 'text-gray-500'}>{k.debt_sales}</span>
                                   <span className="text-gray-300"> / </span>
-                                  <span className={k.cancelled_sales ? 'text-red-600' : 'text-gray-400'}>{k.cancelled_sales}</span>
+                                  <span className={k.cancelled_sales ? 'text-red-600' : 'text-gray-500'}>{k.cancelled_sales}</span>
                                 </td>
                               </>
                             ) : (
-                              <td colSpan={7} className="px-3 py-2.5 text-xs text-gray-400">KPI hisoblanmaydi</td>
+                              <td colSpan={7} className="px-3 py-2.5 text-xs text-gray-500">KPI hisoblanmaydi</td>
                             )}
                             <td className="px-3 py-2.5">
                               <div className="flex justify-end gap-0.5">
@@ -227,7 +227,7 @@ export default function EmployeesPage() {
                                 {e.is_active && (
                                   <button type="button" title="O'chirish" aria-label="O'chirish"
                                     onClick={(ev) => { ev.stopPropagation(); handleDeactivate(e); }}
-                                    className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50">
+                                    className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50">
                                     <UserX size={15} />
                                   </button>
                                 )}

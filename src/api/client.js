@@ -135,7 +135,9 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Check if we use token storage and the request is not already a refresh attempt
-      if (AUTH_STORAGE_TYPE !== 'cookie' && originalRequest.url && !originalRequest.url.includes('/auth/refresh')) {
+      // Login/logout 401s are real answers (bad password, dead session), not expired tokens
+      const isAuthCall = /\/auth\/(refresh|login|logout)/.test(originalRequest.url || '');
+      if (AUTH_STORAGE_TYPE !== 'cookie' && originalRequest.url && !isAuthCall) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
@@ -171,7 +173,6 @@ api.interceptors.response.use(
             const { access_token, refresh_token } = response.data.data;
             setStoredTokens(access_token, refresh_token);
 
-            api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
             originalRequest.headers['Authorization'] = 'Bearer ' + access_token;
 
             processQueue(null, access_token);
@@ -182,7 +183,7 @@ api.interceptors.response.use(
             throw new Error('Token refresh response did not return new tokens');
           }
         } catch (refreshError) {
-          logger.error('Silent token refresh failed, logging out...', refreshError);
+          logger.error('Silent token refresh failed, logging out...', refreshError?.message);
           processQueue(refreshError, null);
           isRefreshing = false;
           clearStoredTokens();

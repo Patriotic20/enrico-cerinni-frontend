@@ -91,7 +91,7 @@ export default function SalesTable({
                   <td className="px-3 py-2.5">
                     {sale.client_name
                       ? <span className="text-gray-900">{sale.client_name}</span>
-                      : <span className="text-gray-400">Mijozsiz</span>}
+                      : <span className="text-gray-500">Mijozsiz</span>}
                     {sale.seller_name && (
                       <div className="text-xs text-gray-500">Sotuvchi: {sale.seller_name}</div>
                     )}
@@ -105,11 +105,11 @@ export default function SalesTable({
                         </div>
                         <div className="text-xs text-gray-500">{qty} dona</div>
                       </>
-                    ) : <span className="text-gray-400">—</span>}
+                    ) : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">
                     <span className="inline-flex items-center gap-1.5">
-                      <PayIcon size={14} className="text-gray-400" />
+                      <PayIcon size={14} className="text-gray-500" />
                       {paymentLabel(sale.payment_method)}
                     </span>
                   </td>
@@ -138,7 +138,7 @@ export default function SalesTable({
                         <Eye size={16} />
                       </IconBtn>
                       {sale.status === 'completed' && onCancelSale && (
-                        <IconBtn title="Bekor qilish" onClick={() => onCancelSale(sale.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50">
+                        <IconBtn title="Bekor qilish" onClick={() => onCancelSale(sale.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50">
                           <XCircle size={16} />
                         </IconBtn>
                       )}

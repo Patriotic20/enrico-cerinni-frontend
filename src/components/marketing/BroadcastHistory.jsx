@@ -36,7 +36,7 @@ const BroadcastHistory = ({ broadcastHistory, loading }) => {
     <div className="space-y-4">
       <Card className="p-4 space-y-4">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             placeholder="Xabar matnida qidirish..."
@@ -64,7 +64,7 @@ const BroadcastHistory = ({ broadcastHistory, loading }) => {
       <Card className="p-4">
         {rows.length === 0 ? (
           <div className="text-center py-12">
-            <History size={32} className="text-gray-400 mx-auto mb-3" />
+            <History size={32} className="text-gray-500 mx-auto mb-3" />
             <p className="text-gray-600">Yuborishlar tarixi bo'sh</p>
           </div>
         ) : (

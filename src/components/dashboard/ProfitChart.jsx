@@ -4,18 +4,7 @@ import { formatCurrency, compactAmount } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function ProfitChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
-  // Default sample data if no data provided
-  const defaultData = [
-    { month: 'Yan', revenue: 850000, cost: 320000, profit: 530000, margin: 62.4 },
-    { month: 'Fev', revenue: 920000, cost: 350000, profit: 570000, margin: 62.0 },
-    { month: 'Mar', revenue: 780000, cost: 290000, profit: 490000, margin: 62.8 },
-    { month: 'Apr', revenue: 1150000, cost: 420000, profit: 730000, margin: 63.5 },
-    { month: 'May', revenue: 1050000, cost: 380000, profit: 670000, margin: 63.8 },
-    { month: 'Iyun', revenue: 1200000, cost: 450000, profit: 750000, margin: 62.5 },
-    { month: 'Iyul', revenue: 1100000, cost: 410000, profit: 690000, margin: 62.7 },
-  ];
-
-  const chartData = data.length > 0 ? data : defaultData;
+  const chartData = data;
 
   const { avgMargin, totalProfit } = useMemo(() => ({
     avgMargin: chartData.length > 0
@@ -40,7 +29,7 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
             {`Foyda: ${formatCurrency(data?.profit || 0)}`}
           </p>
           <p className="text-sm text-gray-600">
-            {`Margin: ${data?.margin?.toFixed(1) || 0}%`}
+            {`Marja: ${data?.margin?.toFixed(1) || 0}%`}
           </p>
         </div>
       );
@@ -87,6 +76,11 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
           </div>
         )}
         
+        {!loading && chartData.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 text-sm text-gray-500">
+            Bu davrda ma'lumot yo'q
+          </div>
+        )}
         <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>
@@ -130,7 +124,7 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
       
       {/* Profit Margin Summary */}
       <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-        <span>O'rtacha margin: <b className="text-green-600">{avgMargin.toFixed(1)}%</b></span>
+        <span>O'rtacha marja: <b className="text-green-600">{avgMargin.toFixed(1)}%</b></span>
         <span>Jami foyda: <b className="text-blue-600">{formatCurrency(totalProfit)}</b></span>
       </div>
     </div>

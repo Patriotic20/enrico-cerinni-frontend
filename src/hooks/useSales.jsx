@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { salesAPI } from '../api';
 import { useConfirm } from '../contexts/ConfirmContext';
 import toast from 'react-hot-toast';
+import { downloadCsv } from '../utils/csv';
+import { formatCurrency } from '../utils/format';
 
 // Local YYYY-MM-DD; toISOString() would shift to UTC and give yesterday
 // before 05:00 in Tashkent.
@@ -220,7 +222,6 @@ export default function useSales() {
         rows.push(...(res.data?.items || []));
         pages = res.data?.pagination?.pages || 1;
       }
-      const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
       const header = ['Chek', 'Sana', 'Mijoz', 'Sotuvchi', 'Mahsulotlar', 'Soni', "To'lov", 'Summa', "To'langan", 'Qarz', 'Holat'];
       const lines = rows.map(s => [
         s.receipt_number,
@@ -234,14 +235,8 @@ export default function useSales() {
         s.paid_amount,
         s.status === 'cancelled' ? 0 : s.total_amount - s.paid_amount,
         s.status
-      ].map(esc).join(','));
-      // BOM so Excel opens UTF-8 correctly.
-      const blob = new Blob(['﻿' + [header.map(esc).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `sotuvlar_${ymd(new Date())}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      ]);
+      downloadCsv(`sotuvlar_${ymd(new Date())}.csv`, header, lines);
       toast.success(`${rows.length} ta sotuv eksport qilindi`, { id });
     } catch (error) {
       console.error('Export error:', error);
@@ -256,12 +251,6 @@ export default function useSales() {
   const formatTime = (dateString) =>
     new Date(dateString).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('uz-UZ', {
-      style: 'currency',
-      currency: 'UZS'
-    }).format(amount);
-  };
 
   const getStatusBadge = (status) => {
     const statusMap = {

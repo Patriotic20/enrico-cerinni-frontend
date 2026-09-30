@@ -64,6 +64,11 @@ export const clientsAPI = {
   },
 
   // Update client debt
+  addDebt: async (clientId, amount) => {
+    const response = await api.patch(`/clients/${clientId}/debt`, { add_amount: amount });
+    return validateApiResponse(response.data);
+  },
+
   updateDebt: async (clientId, debtAmount) => {
     try {
       const response = await api.patch(`/clients/${clientId}/debt`, {

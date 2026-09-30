@@ -87,7 +87,7 @@ export const NAVIGATION_ITEMS = [
   { name: 'Mahsulot qidirish', href: ROUTES.LOOKUP, icon: 'ScanSearch', group: 'Savdo' },
   { name: 'Mijozlar', href: ROUTES.CLIENTS, icon: 'Users', group: 'Savdo' },
   { name: 'Qarzdorliklar', href: ROUTES.DEBTS, icon: 'AlertCircle', group: 'Savdo' },
-  { name: 'Moliya', href: ROUTES.SALES, icon: 'Receipt', staffOnly: true, group: 'Hisob-kitob' },
+  { name: 'Sotuvlar', href: ROUTES.SALES, icon: 'Receipt', staffOnly: true, group: 'Hisob-kitob' },
   { name: 'Xarajatlar', href: ROUTES.FINANCE, icon: 'DollarSign', staffOnly: true, group: 'Hisob-kitob' },
   { name: 'Hisobotlar', href: ROUTES.REPORTS, icon: 'BarChart3', staffOnly: true, group: 'Hisob-kitob' },
   { name: 'Xodimlar', href: ROUTES.EMPLOYEES, icon: 'UserCheck', staffOnly: true, group: 'Boshqaruv' },

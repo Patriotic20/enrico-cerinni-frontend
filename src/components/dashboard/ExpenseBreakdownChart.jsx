@@ -4,18 +4,7 @@ import { formatCurrency } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
-  // Default sample data if no data provided
-  const defaultData = [
-    { name: 'Xodimlar maoshi', value: 2500000, color: '#3b82f6' },
-    { name: 'Mahsulot sotib olish', value: 3200000, color: '#10b981' },
-    { name: 'Ijaraga to\'lov', value: 800000, color: '#f59e0b' },
-    { name: 'Kommunal xizmatlar', value: 450000, color: '#ef4444' },
-    { name: 'Marketing', value: 300000, color: '#8b5cf6' },
-    { name: 'Transport', value: 200000, color: '#06b6d4' },
-    { name: 'Boshqa xarajatlar', value: 550000, color: '#64748b' },
-  ];
-
-  const chartData = data.length > 0 ? data : defaultData;
+  const chartData = data;
   const totalExpenses = useMemo(
     () => chartData.reduce((acc, item) => acc + item.value, 0),
     [chartData]
@@ -93,6 +82,11 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
             </div>
           )}
 
+          {!loading && chartData.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 text-sm text-gray-500">
+              Bu davrda ma'lumot yo'q
+            </div>
+          )}
           <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -127,7 +121,7 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
               </span>
               <span className="shrink-0 text-right">
                 <b className="text-gray-900">{formatCurrency(item.value)}</b>
-                <span className="text-gray-400 ml-1">{((item.value / totalExpenses) * 100).toFixed(0)}%</span>
+                <span className="text-gray-500 ml-1">{((item.value / totalExpenses) * 100).toFixed(0)}%</span>
               </span>
             </li>
           ))}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import Button from './ui/Button';
 import Input from './forms/Input';
+import Modal from './modals/Modal';
 
 const BrandModal = ({ isOpen, onClose, onSave, brand, mode = 'add' }) => {
   const [formData, setFormData] = useState({
@@ -99,24 +99,9 @@ const BrandModal = ({ isOpen, onClose, onSave, brand, mode = 'add' }) => {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 z-50">
-      <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-sm max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">
-            {mode === 'add' ? 'Yangi brend' : 'Brendni tahrirlash'}
-          </h2>
-          <button 
-            className="p-1 hover:bg-gray-100 rounded-md transition-colors" 
-            onClick={onClose}
-          >
-            <X size={18} className="text-gray-400" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'add' ? 'Yangi brend' : 'Brendni tahrirlash'} size="sm">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
               Brend nomi *
@@ -186,8 +171,7 @@ const BrandModal = ({ isOpen, onClose, onSave, brand, mode = 'add' }) => {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

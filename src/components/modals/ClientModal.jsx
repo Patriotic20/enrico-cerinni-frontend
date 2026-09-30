@@ -152,7 +152,7 @@ const ClientModal = ({
       {!showCreateForm ? (
         <div className="space-y-4">
           <div className="relative">
-            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             <input
               autoFocus
               placeholder="Ism yoki telefon raqami..."
@@ -178,7 +178,7 @@ const ClientModal = ({
           ) : list.length === 0 ? (
             <div className="text-center py-10">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <User size={30} className="text-gray-400" />
+                <User size={30} className="text-gray-500" />
               </div>
               <p className="m-0 text-base font-semibold text-gray-800">
                 {searchTerm.trim() ? 'Mijoz topilmadi' : "Hali mijozlar yo'q"}

@@ -92,7 +92,7 @@ export default function PaymentSection({
             autoFocus
             className="w-full h-14 pl-4 pr-16 text-xl font-semibold tabular-nums rounded-xl border-2 border-gray-200 bg-white focus:border-blue-500 outline-none placeholder:text-base placeholder:font-normal"
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">UZS</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">UZS</span>
         </label>
       )}
     </section>

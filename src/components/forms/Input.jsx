@@ -80,7 +80,9 @@ const Input = forwardRef(({
   const isTextarea = type === 'textarea';
 
   // Legacy icon support
-  const actualLeftIcon = leftIcon || Icon;
+  // Element (<Phone />) or component (Phone). Capitalized so JSX treats it as a
+  // component; lucide icons are forwardRef objects, not functions.
+  const LeftIcon = leftIcon || Icon;
 
   // Size variants
   const sizeClasses = {
@@ -117,7 +119,7 @@ const Input = forwardRef(({
     variantClasses[variant],
     
     // Icon spacing
-    actualLeftIcon && 'pl-10',
+    LeftIcon && 'pl-10',
     (rightIcon || type === 'password') && 'pr-10',
     
     // Custom className
@@ -134,7 +136,7 @@ const Input = forwardRef(({
         >
           {label}
           {required && (
-            <span className="text-red-500 ml-1" aria-label="required">
+            <span className="text-red-500 ml-1" aria-hidden="true">
               *
             </span>
           )}
@@ -144,13 +146,9 @@ const Input = forwardRef(({
       {/* Input container */}
       <div className="relative">
         {/* Left icon */}
-        {actualLeftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            {React.isValidElement(actualLeftIcon) ? (
-              actualLeftIcon
-            ) : typeof actualLeftIcon === 'function' ? (
-              <actualLeftIcon className="h-4 w-4" />
-            ) : null}
+        {LeftIcon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+            {React.isValidElement(LeftIcon) ? LeftIcon : <LeftIcon className="h-4 w-4" />}
           </div>
         )}
 
@@ -204,8 +202,8 @@ const Input = forwardRef(({
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="text-gray-500 hover:text-gray-600 transition-colors"
+                aria-label={showPassword ? 'Parolni yashirish' : "Parolni ko'rsatish"}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -214,7 +212,7 @@ const Input = forwardRef(({
                 )}
               </button>
             ) : rightIcon ? (
-              <div className="text-gray-400 pointer-events-none">
+              <div className="text-gray-500 pointer-events-none">
                 {rightIcon}
               </div>
             ) : error ? (
@@ -242,7 +240,7 @@ const Input = forwardRef(({
           role="alert"
         >
           <AlertCircle className="h-3 w-3 flex-shrink-0" />
-          {typeof error === 'string' ? error : 'Invalid input'}
+          {typeof error === 'string' ? error : "Noto'g'ri qiymat"}
         </p>
       )}
     </div>

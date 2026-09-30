@@ -3,18 +3,7 @@ import { formatCurrency, compactAmount } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function CashflowChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
-  // Default sample data if no data provided
-  const defaultData = [
-    { month: 'Yan', income: 850000, expenses: 450000, netFlow: 400000 },
-    { month: 'Fev', income: 920000, expenses: 480000, netFlow: 440000 },
-    { month: 'Mar', income: 780000, expenses: 520000, netFlow: 260000 },
-    { month: 'Apr', income: 1150000, expenses: 490000, netFlow: 660000 },
-    { month: 'May', income: 1050000, expenses: 510000, netFlow: 540000 },
-    { month: 'Iyun', income: 1200000, expenses: 530000, netFlow: 670000 },
-    { month: 'Iyul', income: 1100000, expenses: 550000, netFlow: 550000 },
-  ];
-
-  const chartData = data.length > 0 ? data : defaultData;
+  const chartData = data;
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -71,6 +60,11 @@ export default function CashflowChart({ data = [], selectedPeriod = '1month', lo
           </div>
         )}
         
+        {!loading && chartData.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 text-sm text-gray-500">
+            Bu davrda ma'lumot yo'q
+          </div>
+        )}
         <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>

@@ -121,7 +121,7 @@ export default function SalesPagination({
               size="sm"
               className={cn(
                 "px-3 py-1.5 text-sm font-medium min-w-[36px]",
-                page === '...' && "cursor-default hover:bg-transparent text-gray-400"
+                page === '...' && "cursor-default hover:bg-transparent text-gray-500"
               )}
               onClick={() => page !== '...' && onPageChange(page)}
               disabled={page === '...'}

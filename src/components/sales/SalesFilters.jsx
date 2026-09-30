@@ -24,7 +24,7 @@ export default function SalesFilters({ filters, sellers = [], onFilterChange, on
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="search"
             placeholder="Chek raqami yoki mijoz ismi..."

@@ -78,7 +78,7 @@ const SuppliersTab = ({
       <Card className="p-4">
         <div className="space-y-4">
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder="Yetkazib beruvchilarni qidirish..."
@@ -120,7 +120,7 @@ const SuppliersTab = ({
           <div className="p-8 text-center">
             {suppliers.length === 0 ? (
               <div className="space-y-2">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+                <Building2 className="mx-auto h-12 w-12 text-gray-500" />
                 <p className="text-gray-500 text-sm">Hali yetkazib beruvchilar qo'shilmagan</p>
                 <button
                   onClick={onAddSupplier}
@@ -131,7 +131,7 @@ const SuppliersTab = ({
               </div>
             ) : (
               <div className="space-y-2">
-                <Search className="mx-auto h-12 w-12 text-gray-400" />
+                <Search className="mx-auto h-12 w-12 text-gray-500" />
                 <p className="text-gray-500 text-sm">Filtr bo'yicha yetkazib beruvchi topilmadi</p>
                 <button
                   onClick={resetFilters}

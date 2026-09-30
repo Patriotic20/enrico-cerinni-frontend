@@ -55,7 +55,7 @@ const LoadingSpinner = ({
       aria-label={message || 'Loading'}
       {...props}
     >
-      <span className="sr-only">{message || 'Loading...'}</span>
+      <span className="sr-only">{message || 'Yuklanmoqda...'}</span>
     </div>
   );
 

@@ -14,7 +14,7 @@ export default function TopProducts({ products = [] }) {
             <li key={p.name}>
               <div className="flex items-center justify-between text-xs">
                 <span className="truncate text-gray-700">
-                  <span className="text-gray-400 mr-2">{i + 1}.</span>{p.name}
+                  <span className="text-gray-500 mr-2">{i + 1}.</span>{p.name}
                 </span>
                 <span className="shrink-0 ml-2 font-medium text-gray-900">{formatCurrency(p.total_revenue)}</span>
               </div>

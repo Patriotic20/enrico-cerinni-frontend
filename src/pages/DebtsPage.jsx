@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Wallet, Users, TrendingUp, Search, Plus, Receipt, CreditCard, X, Phone, ChevronRight, AlertTriangle, Send, ShoppingBag, Clock } from 'lucide-react';
+import { RefreshCw, Wallet, Users, TrendingUp, Search, Plus, Receipt, CreditCard, Phone, ChevronRight, AlertTriangle, Send, ShoppingBag, Clock } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import DebtPaymentModal from '../components/modals/DebtPaymentModal';
 import AddDebtModal from '../components/modals/AddDebtModal';
+import Modal from '../components/modals/Modal';
 import { LoadingSpinner } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { clientsAPI, salesAPI } from '../api';
@@ -44,9 +45,9 @@ function Kpi({ icon: Icon, tone, label, value, unit, hint }) {
       <div className="min-w-0">
         <p className="text-xs font-medium text-gray-500 m-0">{label}</p>
         <p className="text-xl font-bold text-gray-900 m-0 tabular-nums whitespace-nowrap">
-          {value} <span className="text-sm font-medium text-gray-400">{unit}</span>
+          {value} <span className="text-sm font-medium text-gray-500">{unit}</span>
         </p>
-        {hint && <p className="text-[11px] text-gray-400 m-0 truncate">{hint}</p>}
+        {hint && <p className="text-[11px] text-gray-500 m-0 truncate">{hint}</p>}
       </div>
     </div>
   );
@@ -214,9 +215,9 @@ export default function DebtsPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           <p className="text-sm font-semibold text-gray-900 m-0 flex items-center gap-1.5">
-            <Clock size={15} className="text-gray-400" /> Qarz muddati bo'yicha
+            <Clock size={15} className="text-gray-500" /> Qarz muddati bo'yicha
           </p>
-          <p className="text-xs text-gray-400 m-0">Eng eski to'lanmagan chekdan hisoblanadi</p>
+          <p className="text-xs text-gray-500 m-0">Eng eski to'lanmagan chekdan hisoblanadi</p>
         </div>
         <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 mb-3">
           {BUCKETS.map(b => stats.byBucket[b.key].sum > 0 && (
@@ -238,7 +239,7 @@ export default function DebtsPage() {
                 </p>
                 <p className="text-sm font-bold text-gray-900 m-0 tabular-nums">
                   {money(s.sum)}{' '}
-                  <span className="text-[11px] font-medium text-gray-400">{stats.total ? Math.round(s.sum / stats.total * 100) : 0}%</span>
+                  <span className="text-[11px] font-medium text-gray-500">{stats.total ? Math.round(s.sum / stats.total * 100) : 0}%</span>
                 </p>
               </button>
             );
@@ -250,7 +251,7 @@ export default function DebtsPage() {
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-2 p-3 border-b border-gray-200">
           <div className="relative flex-1 min-w-[220px] max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             <input
               type="text"
               placeholder="Mijoz ismi yoki telefon raqami..."
@@ -326,7 +327,7 @@ export default function DebtsPage() {
                       onClick={() => handleViewClientDebts(c)}
                       className="group hover:bg-gray-50 cursor-pointer"
                     >
-                      <td className="px-4 py-3 text-gray-400 tabular-nums">{i + 1}</td>
+                      <td className="px-4 py-3 text-gray-500 tabular-nums">{i + 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-9 h-9 rounded-full border text-xs font-semibold flex items-center justify-center shrink-0 ${c.bucket.chip}`}>
@@ -345,15 +346,15 @@ export default function DebtsPage() {
                         <span className={`inline-block px-2 py-0.5 rounded-md border text-xs font-semibold tabular-nums ${c.bucket.chip}`}>
                           {c.oldest_debt_date ? `${c.age} kun` : 'Qo\'lda'}
                         </span>
-                        <p className="text-[11px] text-gray-400 m-0 mt-0.5">
+                        <p className="text-[11px] text-gray-500 m-0 mt-0.5">
                           {c.oldest_debt_date ? `${shortDate(c.oldest_debt_date)} dan` : 'chek yo\'q'}
                         </p>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
                         <p className="text-gray-900 m-0 tabular-nums flex items-center gap-1">
-                          <ShoppingBag size={12} className="text-gray-400" /> {c.orders} ta · {money(c.spent)}
+                          <ShoppingBag size={12} className="text-gray-500" /> {c.orders} ta · {money(c.spent)}
                         </p>
-                        <p className="text-[11px] text-gray-400 m-0">
+                        <p className="text-[11px] text-gray-500 m-0">
                           Oxirgi: {c.sinceLast == null ? '—' : c.sinceLast === 0 ? 'bugun' : `${c.sinceLast} kun oldin`}
                         </p>
                       </td>
@@ -371,9 +372,9 @@ export default function DebtsPage() {
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <p className="m-0">
                           <span className="font-semibold text-red-600 tabular-nums">{money(c.debt_amount)}</span>
-                          <span className="text-xs text-gray-400 ml-1">UZS</span>
+                          <span className="text-xs text-gray-500 ml-1">UZS</span>
                         </p>
-                        <p className="text-[11px] text-gray-400 m-0 tabular-nums">jami qarzning {pctOfTotal.toFixed(1)}%</p>
+                        <p className="text-[11px] text-gray-500 m-0 tabular-nums">jami qarzning {pctOfTotal.toFixed(1)}%</p>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
@@ -416,28 +417,23 @@ export default function DebtsPage() {
       </div>
 
       {/* Debt Details Modal */}
-      {showDebtModal && selectedClient && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowDebtModal(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 text-sm font-semibold flex items-center justify-center">
-                  {initials(selectedClient)}
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900 m-0">{fullName(selectedClient)}</h2>
-                  <p className="text-xs text-gray-500 m-0 flex items-center gap-1">
-                    <Phone size={11} /> {selectedClient.phone || '—'}
-                  </p>
-                </div>
+      <Modal
+        isOpen={showDebtModal && !!selectedClient}
+        onClose={() => setShowDebtModal(false)}
+        title={selectedClient ? fullName(selectedClient) : ''}
+        size="2xl"
+        contentClassName="!p-0"
+      >
+        {selectedClient && (
+          <div className="flex flex-col">
+            {/* Client info */}
+            <div className="flex items-center gap-3 px-4 pt-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 text-sm font-semibold flex items-center justify-center">
+                {initials(selectedClient)}
               </div>
-              <button
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                onClick={() => setShowDebtModal(false)}
-              >
-                <X size={18} />
-              </button>
+              <p className="text-sm text-gray-500 m-0 flex items-center gap-1">
+                <Phone size={12} /> {selectedClient.phone || '—'}
+              </p>
             </div>
 
             {/* Summary */}
@@ -467,7 +463,7 @@ export default function DebtsPage() {
                 >
                   <Icon size={14} />
                   {label}
-                  <span className="text-xs text-gray-400">{count}</span>
+                  <span className="text-xs text-gray-500">{count}</span>
                 </button>
               ))}
             </div>
@@ -547,8 +543,8 @@ export default function DebtsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       <AddDebtModal
         isOpen={showAddDebtModal}

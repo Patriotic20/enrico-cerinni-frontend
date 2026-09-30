@@ -19,7 +19,9 @@ const TelegramLinkCard = ({ clients, syncTelegramLinks }) => {
     if (!id) return;
     try {
       const r = await marketingAPI.getTelegramLink(id);
-      setUrl(r.data.url);
+      // Only ever render a Telegram deep link as href (no javascript: etc.)
+      const link = r.data?.url;
+      setUrl(typeof link === 'string' && link.startsWith('https://t.me/') ? link : null);
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Havola yaratib bo\'lmadi');
     }

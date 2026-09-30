@@ -59,9 +59,8 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
     setLoading(true);
     setError('');
     try {
-      const currentDebt = Number(selectedClient.debt_amount) || 0;
-      const newDebt = currentDebt + value;
-      const response = await clientsAPI.updateDebt(selectedClient.id, newDebt);
+      // Server adds to the current total, so a stale local balance can't overwrite it.
+      const response = await clientsAPI.addDebt(selectedClient.id, value);
       if (response.success) {
         onAdded?.();
         handleClose();
@@ -91,7 +90,7 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
         <div>
           <h3 className="text-base font-semibold mb-2">Mijozni tanlang</h3>
           <div className="relative mb-2">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               placeholder="Mijozlarni qidirish..."
               value={searchTerm}

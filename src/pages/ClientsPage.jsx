@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isStaff } from '../utils/constants';
 import { downloadCsv } from '../utils/csv';
 import { cn } from '../utils/cn';
+import { formatCurrency } from '../utils/format';
 
 const PAGE_SIZE = 15;
 const DAY = 86_400_000;
@@ -82,7 +83,7 @@ const SEGMENTS = [
 ];
 const SEGMENT_BY_KEY = Object.fromEntries(SEGMENTS.map(s => [s.key, s]));
 
-const money = (n) => `${Math.round(Number(n) || 0).toLocaleString('ru-RU')} UZS`;
+const money = formatCurrency;
 const daysSince = (d, now) => (d ? Math.floor((now - new Date(d)) / DAY) : null);
 const ago = (days) => {
   if (days == null) return '—';
@@ -305,7 +306,7 @@ export default function ClientsPage() {
               <Phone className="h-3 w-3" />{c.phone}
               {c.telegram_chat_id && <Send className="h-3 w-3 text-sky-500 ml-1" aria-label="Telegram ulangan" />}
             </a>
-          ) : <span className="text-sm text-gray-400">—</span>}
+          ) : <span className="text-sm text-gray-500">—</span>}
           {c.address && (
             <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
               <MapPin className="h-3 w-3 flex-shrink-0" /><span className="truncate">{c.address}</span>
@@ -373,9 +374,11 @@ export default function ClientsPage() {
           <p className="text-sm text-gray-500 m-0">Mijozlar bazasi, segmentlar va marketing takliflari</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => exportCsv(filtered, segment)}>
-            <Download size={14} className="mr-1" />CSV
-          </Button>
+          {canManage && (
+            <Button variant="outline" size="sm" onClick={() => exportCsv(filtered, segment)}>
+              <Download size={14} className="mr-1" />CSV
+            </Button>
+          )}
           {canManage && (
             <Button variant="outline" size="sm" onClick={() => message([])}>
               <Send size={14} className="mr-1" />Hammaga xabar
@@ -388,15 +391,18 @@ export default function ClientsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+      {/* Revenue KPIs are staff-only; cashiers see counts and debt */}
+      <div className={cn('grid grid-cols-2 gap-3 mb-4', canManage ? 'lg:grid-cols-5' : 'lg:grid-cols-3')}>
         <Kpi icon={Users} tone="bg-blue-50 text-blue-600" label="Jami mijozlar" value={stats.total}
           sub={`+${stats.newCount} yangi (30 kun)`} />
         <Kpi icon={TrendingUp} tone="bg-emerald-50 text-emerald-600" label="Faol (30 kun)" value={stats.active30}
           sub={`${stats.total ? Math.round(stats.active30 / stats.total * 100) : 0}% bazadan`} />
-        <Kpi icon={Wallet} tone="bg-indigo-50 text-indigo-600" label="Mijozlar tushumi" value={money(stats.revenue)}
-          sub={`O'rt. LTV: ${money(stats.ltv)}`} />
-        <Kpi icon={Receipt} tone="bg-amber-50 text-amber-600" label="O'rtacha chek" value={money(stats.avgCheck)}
-          sub={<><Repeat size={10} className="inline mr-1" />Qayta xarid: {Math.round(stats.repeatRate * 100)}%</>} />
+        {canManage && (<>
+          <Kpi icon={Wallet} tone="bg-indigo-50 text-indigo-600" label="Mijozlar tushumi" value={money(stats.revenue)}
+            sub={`O'rt. LTV: ${money(stats.ltv)}`} />
+          <Kpi icon={Receipt} tone="bg-amber-50 text-amber-600" label="O'rtacha chek" value={money(stats.avgCheck)}
+            sub={<><Repeat size={10} className="inline mr-1" />Qayta xarid: {Math.round(stats.repeatRate * 100)}%</>} />
+        </>)}
         <Kpi icon={AlertTriangle} tone="bg-red-50 text-red-600" label="Qarzdorlik" value={money(stats.debt)}
           sub={`${stats.debtors} ta qarzdor`} />
       </div>
@@ -416,9 +422,11 @@ export default function ClientsPage() {
                 <span className="text-xs font-medium text-gray-600 truncate">{s.label}</span>
               </div>
               <p className="text-xl font-bold text-gray-900 m-0 mt-1">{n}</p>
-              <p className="text-[11px] text-gray-500 m-0">
-                {stats.revenue ? Math.round(revenue / stats.revenue * 100) : 0}% tushum
-              </p>
+              {canManage && (
+                <p className="text-[11px] text-gray-500 m-0">
+                  {stats.revenue ? Math.round(revenue / stats.revenue * 100) : 0}% tushum
+                </p>
+              )}
             </button>
           );
         })}
@@ -450,7 +458,7 @@ export default function ClientsPage() {
         <Card padding="none" className="overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 flex flex-col md:flex-row md:items-center gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Ism, telefon yoki manzil bo'yicha qidirish..."
                 className="w-full h-9 pl-9 pr-3 text-sm rounded-md border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" />
@@ -472,9 +480,11 @@ export default function ClientsPage() {
                     <MessageSquare size={14} className="mr-1" />Xabar
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => exportCsv(clients.filter(c => selected.includes(c.id)), 'tanlangan')}>
-                  <Download size={14} className="mr-1" />CSV
-                </Button>
+                {canManage && (
+                  <Button size="sm" variant="outline" onClick={() => exportCsv(clients.filter(c => selected.includes(c.id)), 'tanlangan')}>
+                    <Download size={14} className="mr-1" />CSV
+                  </Button>
+                )}
                 {canManage && (
                   <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50"
                     onClick={() => openModal('delete', { id: 'bulk', first_name: `${selected.length} ta`, last_name: 'mijoz' })}>
@@ -512,11 +522,11 @@ export default function ClientsPage() {
         <div className="space-y-4">
           <MiniList
             title="Eng yaxshi mijozlar" icon={Crown} items={stats.topCustomers} empty="Hali xaridlar yo'q"
-            footer={stats.revenue > 0 && <>Top 20% mijozlar tushumning <b>{Math.round(stats.topShare * 100)}%</b> ini beradi</>}
+            footer={canManage && stats.revenue > 0 && <>Top 20% mijozlar tushumning <b>{Math.round(stats.topShare * 100)}%</b> ini beradi</>}
             render={(c, i) => (
               <li key={c.id} onClick={() => openModal('details', c)}
                 className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-gray-50">
-                <span className="w-5 text-xs font-bold text-gray-400">{i + 1}</span>
+                <span className="w-5 text-xs font-bold text-gray-500">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate m-0">{c.name}</p>
                   <p className="text-xs text-gray-500 m-0">{c.orders} ta xarid · {ago(c.recency)}</p>

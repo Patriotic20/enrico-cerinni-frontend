@@ -1,5 +1,3 @@
-import logger from './logger';
-
 export const createApiResponse = (success, data = null, message = '', error = null) => ({
   success,
   data,
@@ -22,14 +20,15 @@ export class ApiError extends Error {
     this.success = false;
     this.data = data;
     this.status = status;
-    this.response = response;
-    this.cause = cause;
+    // Keep only status/data: the raw axios response carries config.headers
+    // (Bearer token) and config.data (login password), and ApiErrors get logged.
+    this.response = response ? { status: response.status, data: response.data } : null;
+    if (import.meta.env.DEV) this.cause = cause;
     this.timestamp = new Date().toISOString();
   }
 }
 
 export const handleApiError = (error) => {
-  logger.error('API Error', error);
   if (error.response) {
     const { status, data } = error.response;
     const errorMessage = data?.message || data?.detail || `HTTP ${status} error`;
@@ -70,6 +69,11 @@ const BACKEND_MESSAGE_UZ = {
   'Payment amount must be greater than zero':
     'To\'lov summasi noldan katta bo\'lishi kerak',
   'Sale not found': 'Sotuv topilmadi',
+  'Incorrect email or password': "Email yoki parol noto'g'ri",
+  'Too many login attempts. Try again later.': "Juda ko'p urinish. Birozdan so'ng qayta urinib ko'ring",
+  'User account is disabled': "Hisob o'chirilgan. Administratorga murojaat qiling",
+  'Invalid email format': "Email formati noto'g'ri",
+  'Current password is incorrect': "Joriy parol noto'g'ri",
   'Internal server error':
     'Serverda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko\'ring.',
 };
@@ -79,6 +83,12 @@ export const getApiErrorMessage = (error, fallback = 'Xatolik yuz berdi. Iltimos
   const raw = error?.message || error?.response?.data?.message || error?.response?.data?.detail;
 
   if (raw && BACKEND_MESSAGE_UZ[raw]) return BACKEND_MESSAGE_UZ[raw];
+
+  // Messages that carry the SKU: "Insufficient stock for product variant EC-1"
+  const stock = raw?.match(/^Insufficient stock for product variant (.+)$/);
+  if (stock) return `Omborda yetarli emas: ${stock[1]}`;
+  const price = raw?.match(/^Price for (\S+) exceeds list price/);
+  if (price) return `${price[1]} narxi asl narxdan yuqori bo'lishi mumkin emas`;
 
   // Network failures and timeouts never reach the backend, so there is no
   // server message to translate — the interceptor already produced a localized

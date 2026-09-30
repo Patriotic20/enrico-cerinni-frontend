@@ -1,8 +1,10 @@
 import { Search, SearchX, X, ScanBarcode } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import VariantSelectionModal from './VariantSelectionModal';
 import ProductGrid from './ProductGrid';
 import toast from 'react-hot-toast';
+import { isBarcode } from '../../utils/barcode';
+import { ERROR_MESSAGES } from '../../utils/constants';
 
 export default function ProductSearch({
   searchTerm,
@@ -13,7 +15,8 @@ export default function ProductSearch({
   setIsSearchFocused,
   addToCart,
   addManyToCart,
-  onBarcodeScan
+  onBarcodeScan,
+  onSearch
 }) {
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -108,7 +111,8 @@ export default function ProductSearch({
     };
   }, [showVariantModal]);
 
-  const handleAddToCart = (product, scannedSku = null) => {
+  // Stable so the memoized ProductGrid skips re-rendering on every keystroke.
+  const handleAddToCart = useCallback((product, scannedSku = null) => {
     // Safety check - don't proceed if product is null/undefined
     if (!product) {
       console.warn('handleAddToCart called with null/undefined product');
@@ -129,7 +133,7 @@ export default function ProductSearch({
         }
       }, 100);
     }
-  };
+  }, [addToCart, setSearchTerm]);
 
   // The modal always hands back an array — one cart line per chosen variant.
   const handleVariantSelect = (variantProducts) => {
@@ -154,10 +158,12 @@ export default function ProductSearch({
   // A scan miss only means no variant matched the code exactly — the regular
   // search may well list the product just below, so this stays a hint rather
   // than an error, which would contradict the results on screen.
+  // Barcode terms skip the debounced text search, so run it here on a miss.
   const notifyScanMiss = (code) => {
     toast(`"${code}" bo'yicha aniq moslik yo'q — ro'yxatdan tanlang`, {
       icon: '🔎',
     });
+    onSearch?.(code);
   };
 
   // Run a barcode scan for the given code. Shared by the debounced input
@@ -181,8 +187,9 @@ export default function ProductSearch({
         notifyScanMiss(code);
       }
     } catch (error) {
-      console.error('Barcode scan error:', error);
-      notifyScanMiss(code);
+      console.error('Barcode scan error:', error?.message);
+      if (error?.message === ERROR_MESSAGES.PRODUCT_OUT_OF_STOCK) toast.error(error.message);
+      else notifyScanMiss(code);
       setSelectedProduct(null);
       setScannedVariantSku(null);
       setShowVariantModal(false);
@@ -209,9 +216,7 @@ export default function ProductSearch({
     }
 
     const trimmed = value.trim();
-    const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(trimmed);
-
-    if (isBarcodePattern) {
+    if (isBarcode(trimmed)) {
       scanTimeoutRef.current = setTimeout(() => {
         runBarcodeScan(trimmed);
       }, 120);
@@ -228,9 +233,7 @@ export default function ProductSearch({
       }
 
       const trimmed = searchTerm.trim();
-      const isBarcodePattern = /^[A-Za-z0-9]{8,}$/.test(trimmed);
-
-      if (isBarcodePattern) {
+      if (isBarcode(trimmed)) {
         await runBarcodeScan(trimmed);
       } else if (searchResults.length > 0) {
         // If not a barcode but we have search results, add first result
@@ -242,12 +245,13 @@ export default function ProductSearch({
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
       <div className="relative shrink-0">
-        <Search size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        <Search size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
           autoComplete="off"
           placeholder="Mahsulot nomi, SKU yoki shtrix-kod..."
+          aria-label="Mahsulot qidirish"
           value={searchTerm}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
@@ -266,7 +270,7 @@ export default function ProductSearch({
               type="button"
               aria-label="Tozalash"
               onClick={() => { setSearchTerm(''); inputRef.current?.focus(); }}
-              className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+              className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             >
               <X size={20} />
             </button>
@@ -278,18 +282,20 @@ export default function ProductSearch({
         </div>
       </div>
 
-      {!searchLoading && searchResults.length > 0 && (
+      {/* Kept mounted while a new search loads so scroll and chip survive */}
+      {searchResults.length > 0 && (
         <ProductGrid
           products={searchResults}
           title={searchTerm.trim() ? 'Natijalar' : 'Barchasi'}
           onAdd={handleAddToCart}
+          dimmed={searchLoading}
         />
       )}
 
       {!searchLoading && searchTerm.trim() && searchResults.length === 0 && (
         <div className="mt-4 flex flex-col items-center py-8 text-center">
           <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-            <SearchX size={26} className="text-gray-400" />
+            <SearchX size={26} className="text-gray-500" />
           </div>
           <p className="m-0 text-base font-medium text-gray-700">Mahsulot topilmadi</p>
           <p className="m-0 text-sm text-gray-500 mt-1">Boshqa nom yoki kod bilan urinib ko'ring</p>

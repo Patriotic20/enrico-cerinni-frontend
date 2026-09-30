@@ -275,3 +275,10 @@ input, textarea, select {
   #receipt, #receipt * { visibility: visible; }
   #receipt { position: fixed; left: 0; top: 0; width: 80mm; border: none; padding: 0; }
 }
+
+/* Visible keyboard focus everywhere; :where() keeps specificity at 0 so any
+   component's own focus/outline utilities still win. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}

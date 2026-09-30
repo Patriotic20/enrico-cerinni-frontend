@@ -1,7 +1,5 @@
 // Core hooks
 export { useAuth } from './useAuth';
-export { useApi } from './useApi';
-export { useLocalStorage } from './useLocalStorage';
 export { useDebounce } from './useDebounce';
 
 // Feature-specific hooks
@@ -12,7 +10,5 @@ export { useProductSearch } from './useProductSearch';
 export { usePayment } from './usePayment';
 export { useFinance } from './useFinance';
 export { default as useSales } from './useSales';
-export { useProductManagement } from './useProductManagement';
 export { useMarketing } from './useMarketing';
-export { useReports, useReportType } from './useReports';
 export { default as useProductDetail } from './useProductDetail'; 

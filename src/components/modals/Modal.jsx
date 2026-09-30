@@ -16,10 +16,11 @@
  * </Modal>
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { openLayer, closeLayer, isTopLayer, trapTab } from '../../utils/modalStack';
 
 const Modal = ({ 
   isOpen, 
@@ -38,6 +39,8 @@ const Modal = ({
 }) => {
   const modalRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const layerRef = useRef(null);
+  const titleId = useId();
 
   // Size configurations - made more compact
   const sizeClasses = {
@@ -52,11 +55,14 @@ const Modal = ({
     full: 'max-w-full mx-3',
   };
 
-  // Handle escape key
+  // Keys go to the top-most dialog only: one Esc closes one layer, and a
+  // ConfirmDialog opened over this modal keeps its keys to itself.
   const handleKeyDown = useCallback((e) => {
+    if (!isTopLayer(layerRef.current)) return;
     if (e.key === 'Escape' && closeOnEscape) {
       onClose();
     }
+    trapTab(e, modalRef.current);
   }, [closeOnEscape, onClose]);
 
   // Handle overlay click
@@ -69,18 +75,15 @@ const Modal = ({
   // Focus + body-scroll: run once per open. Must NOT depend on handleKeyDown,
   // else re-running steals focus from inputs on every parent re-render.
   useEffect(() => {
-    if (!isOpen) {
-      document.body.style.overflow = 'unset';
-      return;
-    }
+    if (!isOpen) return;
     previousFocusRef.current = document.activeElement;
-    document.body.style.overflow = 'hidden';
+    layerRef.current = openLayer();
     // Respect autoFocus on a child: React focuses it before this effect runs.
     if (modalRef.current && !modalRef.current.contains(document.activeElement)) {
       modalRef.current.focus();
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      closeLayer(layerRef.current);
       if (previousFocusRef.current) {
         previousFocusRef.current.focus();
       }
@@ -102,20 +105,18 @@ const Modal = ({
       className={cn(
         'fixed inset-0 z-50 flex items-center justify-center p-3',
         'bg-black/40 backdrop-blur-sm',
-        'animate-in fade-in duration-200',
         overlayClassName
       )}
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby={title ? "modal-title" : undefined}
+      aria-labelledby={title ? titleId : undefined}
     >
       <div 
         ref={modalRef}
         className={cn(
           'relative w-full bg-white rounded-lg shadow-xl border border-gray-200',
-          'max-h-[90vh] overflow-hidden',
-          'animate-in zoom-in-95 duration-200',
+          'max-h-[90dvh] overflow-hidden',
           sizeClasses[size],
           className
         )}
@@ -132,7 +133,7 @@ const Modal = ({
           )}>
             {title && (
               <h2 
-                id="modal-title" 
+                id={titleId}
                 className="text-lg font-semibold text-gray-900 truncate"
               >
                 {title}
@@ -145,13 +146,13 @@ const Modal = ({
                 onClick={onClose}
                 className={cn(
                   'flex items-center justify-center w-10 h-10 -mr-2',
-                  'text-gray-400 hover:text-gray-600',
+                  'text-gray-500 hover:text-gray-600',
                   'hover:bg-gray-100 rounded-md',
                   'transition-colors duration-200',
-                  'focus:outline-none focus:ring-1 focus:ring-blue-400/30',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
                   !title && 'ml-auto'
                 )}
-                aria-label="Close modal"
+                aria-label="Yopish"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -162,7 +163,7 @@ const Modal = ({
         {/* Content */}
         <div className={cn(
           'px-4 py-4 overflow-y-auto',
-          'max-h-[calc(90vh-60px)]', // Account for smaller header
+          'max-h-[calc(90dvh-60px)]', // Account for smaller header
           contentClassName
         )}>
           {children}

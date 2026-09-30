@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { productsAPI, salesAPI, clientsAPI, employeesAPI } from '../api';
 import { useCart } from './useCart';
 import { useProductSearch } from './useProductSearch';
@@ -6,6 +6,7 @@ import { usePayment } from './usePayment';
 import { useApp } from '../contexts/AppContext';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES, PAYMENT_METHODS } from '../utils/constants';
 import logger from '../utils/logger';
+import { getApiErrorMessage } from '../utils/api';
 
 const LAST_SELLER_KEY = 'checkout:lastSellerId';
 
@@ -14,7 +15,7 @@ export const useCheckout = () => {
   
   // Use the smaller, focused hooks
   const cart = useCart();
-  const productSearch = useProductSearch();
+  const productSearch = useProductSearch({ skipBarcodes: true });
   const [clientDebt, setClientDebt] = useState(0);
   
   // Checkout-specific state
@@ -166,7 +167,12 @@ export const useCheckout = () => {
     setPaymentModal(true);
   };
 
+  // A ref, not state: two taps land before the disabled button re-renders.
+  const submittingRef = useRef(false);
+
   const processPayment = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
 
     try {
@@ -218,8 +224,10 @@ export const useCheckout = () => {
       }
     } catch (error) {
       logger.error('Error processing checkout', error);
-      showError('Sotuvni amalga oshirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.');
+      // Show the backend reason (e.g. out of stock) when there is one.
+      showError(getApiErrorMessage(error, 'Sotuvni amalga oshirishda xatolik yuz berdi. Iltimos, qaytadan urinib ko\'ring.'));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

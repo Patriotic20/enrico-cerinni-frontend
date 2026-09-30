@@ -26,25 +26,25 @@ import { cn } from '../../utils/cn';
  */
 const VARIANT_STYLES = {
   // Primary - Main call-to-action buttons
-  primary: 'bg-blue-500 text-white shadow-sm hover:bg-blue-600 active:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+  primary: 'bg-blue-600 text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
   
   // Secondary - Secondary actions
-  secondary: 'bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200 active:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
+  secondary: 'bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200 active:bg-gray-300 focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2',
   
   // Outline - Subtle actions
-  outline: 'bg-transparent text-blue-600 border border-blue-300 hover:bg-blue-50 active:bg-blue-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+  outline: 'bg-transparent text-blue-600 border border-blue-300 hover:bg-blue-50 active:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
   
   // Ghost - Minimal visual weight
-  ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 active:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
+  ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2',
   
   // Danger - Destructive actions
-  danger: 'bg-red-500 text-white shadow-sm hover:bg-red-600 active:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2',
+  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2',
   
   // Success - Positive actions
-  success: 'bg-green-500 text-white shadow-sm hover:bg-green-600 active:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2',
+  success: 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800 focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2',
   
   // Warning - Attention-requiring actions
-  warning: 'bg-yellow-500 text-white shadow-sm hover:bg-yellow-600 active:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2',
+  warning: 'bg-amber-400 text-gray-900 shadow-sm hover:bg-amber-500 active:bg-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2',
 };
 
 /**

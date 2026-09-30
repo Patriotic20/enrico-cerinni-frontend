@@ -57,7 +57,7 @@ export default function PaymentConfirmationModal({
         </div>
 
         <div className="divide-y divide-gray-100">
-          <Row label="Mijoz">{clientName || <span className="text-gray-400 font-normal">Tanlanmagan</span>}</Row>
+          <Row label="Mijoz">{clientName || <span className="text-gray-500 font-normal">Tanlanmagan</span>}</Row>
           <Row label="Sotuvchi">{sellerName || '—'}</Row>
           <Row label="To'lov">
             {METHOD_LABELS[paymentMethod]}

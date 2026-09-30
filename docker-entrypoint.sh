@@ -15,6 +15,12 @@ CONFIG_FILE="${DIST_DIR}/config.js"
 
 API_URL="${API_URL:-https://api.enrico.uz}"
 
+# The value is pasted into JavaScript, so allow URL characters only.
+if ! printf '%s' "${API_URL}" | grep -Eq '^((https?://)?[A-Za-z0-9.:_-]+|/)[A-Za-z0-9./_-]*$'; then
+  echo "Invalid API_URL: ${API_URL}" >&2
+  exit 1
+fi
+
 echo "Generating runtime config..."
 echo "  API_URL = ${API_URL}"
 

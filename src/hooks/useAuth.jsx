@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/auth';
+import { getApiErrorMessage } from '../utils/api';
 import { AUTH_STORAGE_TYPE, setStoredTokens, clearStoredTokens, getStoredAccessToken } from '../api/client';
 
 export const useAuth = () => {
@@ -73,7 +74,10 @@ export const useAuth = () => {
         }
       } else {
         setUser(null);
-        const errorMessage = response?.message || 'Login failed';
+        const errorMessage = getApiErrorMessage(
+          { message: response?.message, status: 200 },
+          response?.message || 'Kirish amalga oshmadi'
+        );
         setError(errorMessage);
         return { 
           success: false, 
@@ -84,7 +88,7 @@ export const useAuth = () => {
       console.error('Login error:', error);
       setUser(null);
       // handleApiError already resolves the server message into error.message.
-      const errorMessage = error?.message || 'Network error occurred';
+      const errorMessage = getApiErrorMessage(error, error?.message || 'Tarmoq xatosi');
       setError(errorMessage);
       return { 
         success: false, 

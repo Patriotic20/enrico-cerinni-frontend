@@ -4,18 +4,7 @@ import { formatCurrency, compactAmount } from '../../utils/format';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function SalesPerformanceChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
-  // Default sample data if no data provided
-  const defaultData = [
-    { month: 'Yan', sales: 850000, orders: 45, avgOrder: 18889, growth: 12 },
-    { month: 'Fev', sales: 920000, orders: 52, avgOrder: 17692, growth: 8 },
-    { month: 'Mar', sales: 780000, orders: 38, avgOrder: 20526, growth: -15 },
-    { month: 'Apr', sales: 1150000, orders: 58, avgOrder: 19828, growth: 47 },
-    { month: 'May', sales: 1050000, orders: 55, avgOrder: 19091, growth: -9 },
-    { month: 'Iyun', sales: 1200000, orders: 62, avgOrder: 19355, growth: 14 },
-    { month: 'Iyul', sales: 1100000, orders: 56, avgOrder: 19643, growth: -8 },
-  ];
-
-  const chartData = data.length > 0 ? data : defaultData;
+  const chartData = data;
 
   const { totalSales, totalOrders, avgOrder } = useMemo(() => ({
     totalSales: chartData.reduce((acc, item) => acc + (item.sales || 0), 0),
@@ -88,6 +77,11 @@ export default function SalesPerformanceChart({ data = [], selectedPeriod = '1mo
           </div>
         )}
         
+        {!loading && chartData.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 text-sm text-gray-500">
+            Bu davrda ma'lumot yo'q
+          </div>
+        )}
         <div className={`h-full transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -5, bottom: 0 }}>

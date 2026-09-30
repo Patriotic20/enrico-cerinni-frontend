@@ -77,12 +77,7 @@ const SettingsPage = () => {
     }
   };
 
-  // Load initial tab data when component mounts
-  useEffect(() => {
-    loadTabData(activeTab);
-  }, []);
-
-  // Load data when tab changes
+  // Load data on mount and when the tab changes
   useEffect(() => {
     loadTabData(activeTab);
   }, [activeTab]);
@@ -179,7 +174,10 @@ const SettingsPage = () => {
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
   const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
     try {
       switch (activeTab) {
         case 'categories':
@@ -209,6 +207,8 @@ const SettingsPage = () => {
     } catch (error) {
       console.error(`Error deleting ${activeTab}:`, error);
       toast.error(`${tabs.find(tab => tab.id === activeTab).name} o'chirishda xatolik yuz berdi.`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -478,6 +478,8 @@ const SettingsPage = () => {
                 <Button
                   variant="danger"
                   onClick={handleDelete}
+                  loading={deleting}
+                  disabled={deleting}
                 >
                   O'chirish
                 </Button>

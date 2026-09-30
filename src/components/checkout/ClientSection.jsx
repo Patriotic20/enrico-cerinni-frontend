@@ -16,11 +16,11 @@ export default function ClientSection({
         onClick={() => setShowClientModal(true)}
         className="w-full flex items-center gap-3 h-14 px-3 rounded-xl border-2 border-dashed border-gray-300 text-left hover:border-blue-500 hover:bg-blue-50/50 transition-colors"
       >
-        <UserPlus size={22} className="text-gray-400 shrink-0" />
+        <UserPlus size={22} className="text-gray-500 shrink-0" />
         <span className="flex-1 min-w-0 text-base font-semibold text-gray-800">
-          Mijoz <span className="font-normal text-gray-400">· ixtiyoriy</span>
+          Mijoz <span className="font-normal text-gray-500">· ixtiyoriy</span>
         </span>
-        <ChevronRight size={20} className="text-gray-400" />
+        <ChevronRight size={20} className="text-gray-500" />
       </button>
     );
   }
@@ -54,7 +54,7 @@ export default function ClientSection({
         type="button"
         aria-label="Mijozni olib tashlash"
         onClick={() => setSelectedClient(null)}
-        className="w-11 h-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-800 hover:bg-white"
+        className="w-11 h-11 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-800 hover:bg-white"
       >
         <X size={20} />
       </button>

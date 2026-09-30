@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
-import clsx from 'clsx';
+import { cn } from '../../utils/cn';
 import { formatCurrency } from '../../utils/format';
 
 const OTHER = 'Boshqa';
@@ -43,8 +43,8 @@ const productMeta = (product) => {
   };
 };
 
-const ProductCard = ({ product, onAdd }) => {
-  const { stock, price, from, colors, sizes } = productMeta(product);
+const ProductCard = memo(({ product, meta, onAdd }) => {
+  const { stock, price, from, colors, sizes } = meta;
   const out = stock <= 0;
   const category = product.category_name || OTHER;
 
@@ -56,9 +56,9 @@ const ProductCard = ({ product, onAdd }) => {
       className="group flex gap-3 p-3 text-left bg-white rounded-xl border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-blue-400 hover:shadow-md active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:shadow-none"
     >
       {product.image_url ? (
-        <img src={product.image_url} alt="" className="w-14 h-14 shrink-0 rounded-lg object-cover bg-gray-100" />
+        <img src={product.image_url} alt="" loading="lazy" decoding="async" width={56} height={56} className="w-14 h-14 shrink-0 rounded-lg object-cover bg-gray-100" />
       ) : (
-        <span className={clsx('w-14 h-14 shrink-0 rounded-lg flex items-center justify-center text-base font-bold', tintFor(category))}>
+        <span className={cn('w-14 h-14 shrink-0 rounded-lg flex items-center justify-center text-base font-bold', tintFor(category))}>
           {initials(product.name)}
         </span>
       )}
@@ -90,7 +90,7 @@ const ProductCard = ({ product, onAdd }) => {
             {from && <span className="text-[11px] text-gray-500 mr-1">dan</span>}
             <span className="text-[15px] font-bold text-gray-900">{price}</span>
           </span>
-          <span className={clsx(
+          <span className={cn(
             'text-[11px] font-medium px-1.5 py-0.5 rounded',
             out ? 'bg-red-50 text-red-600' : stock <= 3 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
           )}>
@@ -104,15 +104,18 @@ const ProductCard = ({ product, onAdd }) => {
       </span>
     </button>
   );
-};
+});
 
 /**
  * Checkout product list: category chips on top, products grouped under
  * sticky category headers. Search results arrive already filtered, so the
  * chips only narrow what is on screen.
  */
-export default function ProductGrid({ products, title, onAdd }) {
+function ProductGrid({ products, title, onAdd, dimmed = false }) {
   const [category, setCategory] = useState('all');
+
+  // Per-product meta once per result set, not per render / sort comparison.
+  const metas = useMemo(() => new Map(products.map(p => [p.id, productMeta(p)])), [products]);
 
   const groups = useMemo(() => {
     const map = new Map();
@@ -124,8 +127,8 @@ export default function ProductGrid({ products, title, onAdd }) {
     // Alphabetical, "Boshqa" last; in-stock items first inside each group.
     return [...map.entries()]
       .sort(([a], [b]) => (a === OTHER) - (b === OTHER) || a.localeCompare(b))
-      .map(([name, items]) => [name, items.sort((x, y) => (productMeta(x).stock <= 0) - (productMeta(y).stock <= 0))]);
-  }, [products]);
+      .map(([name, items]) => [name, items.sort((x, y) => (metas.get(x.id).stock <= 0) - (metas.get(y.id).stock <= 0))]);
+  }, [products, metas]);
 
   // A chip can disappear when the search changes; fall back to "all".
   const active = groups.some(([name]) => name === category) ? category : 'all';
@@ -136,17 +139,17 @@ export default function ProductGrid({ products, title, onAdd }) {
       key={id}
       type="button"
       onClick={() => setCategory(id)}
-      className={clsx(
+      className={cn(
         'shrink-0 h-9 px-3.5 rounded-full text-sm font-medium border transition-colors',
         active === id ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
       )}
     >
-      {label} <span className={clsx('ml-1 text-xs', active === id ? 'text-white/70' : 'text-gray-400')}>{count}</span>
+      {label} <span className={cn('ml-1 text-xs', active === id ? 'text-white/70' : 'text-gray-500')}>{count}</span>
     </button>
   );
 
   return (
-    <div className="mt-4 flex-1 min-h-0 flex flex-col">
+    <div className={cn('mt-4 flex-1 min-h-0 flex flex-col transition-opacity', dimmed && 'opacity-60')} aria-busy={dimmed}>
       <div className="flex items-center gap-2 overflow-x-auto pb-2 shrink-0 [scrollbar-width:thin]">
         {chip('all', title, products.length)}
         {groups.length > 1 && groups.map(([name, items]) => chip(name, name, items.length))}
@@ -156,12 +159,12 @@ export default function ProductGrid({ products, title, onAdd }) {
         {visible.map(([name, items]) => (
           <section key={name} className="mb-4 last:mb-0">
             {(active === 'all' && groups.length > 1) && (
-              <h3 className="sticky top-0 z-10 m-0 py-2 bg-white/95 backdrop-blur text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {name} <span className="text-gray-400 font-normal">· {items.length}</span>
+              <h3 className="sticky top-0 z-10 m-0 py-2 bg-white text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {name} <span className="text-gray-500 font-normal">· {items.length}</span>
               </h3>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
-              {items.map(p => <ProductCard key={p.id} product={p} onAdd={onAdd} />)}
+              {items.map(p => <ProductCard key={p.id} product={p} meta={metas.get(p.id)} onAdd={onAdd} />)}
             </div>
           </section>
         ))}
@@ -169,3 +172,5 @@ export default function ProductGrid({ products, title, onAdd }) {
     </div>
   );
 }
+
+export default memo(ProductGrid);

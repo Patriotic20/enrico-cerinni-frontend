@@ -53,7 +53,7 @@ const DashboardPageContent = () => {
     chartLoading, 
     error, 
     handlePeriodChange,
-    refetch 
+    refreshData
   } = useDashboard();
 
   if (loading) {
@@ -61,7 +61,7 @@ const DashboardPageContent = () => {
   }
 
   if (error) {
-    return <DashboardError error={error} onRetry={refetch} />;
+    return <DashboardError error={error} onRetry={refreshData} />;
   }
 
   return (

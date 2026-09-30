@@ -1,7 +1,49 @@
 import { useState, useEffect } from 'react';
-import { Scan, X, Package, Tag, Hash, FileText, Calendar, Zap } from 'lucide-react';
+import { Scan, Package, Tag, Hash, FileText, Calendar, Zap } from 'lucide-react';
 import Button from '../ui/Button';
+import Modal from '../modals/Modal';
 import toast from 'react-hot-toast';
+
+// Module-level so it keeps its typed input across ProductForm re-renders.
+const SKUScanner = ({ isOpen, onClose, onScan }) => {
+  const [scannedCode, setScannedCode] = useState('');
+
+  // Start each opening with an empty field.
+  useEffect(() => {
+    if (isOpen) setScannedCode('');
+  }, [isOpen]);
+
+  const handleScanSubmit = (e) => {
+    e.preventDefault();
+    if (scannedCode.trim()) {
+      onScan(scannedCode.trim());
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="SKU Kodini Kiriting" size="md">
+      <form onSubmit={handleScanSubmit} className="space-y-4">
+        <input
+          type="text"
+          value={scannedCode}
+          onChange={(e) => setScannedCode(e.target.value)}
+          placeholder="SKU kodini kiriting..."
+          aria-label="SKU kodi"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+            Bekor qilish
+          </Button>
+          <Button type="submit" variant="primary" size="sm">
+            Qo'shish
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
 
 const ProductForm = ({ product, brands, categories, seasons, onSubmit, onCancel, loading = false }) => {
   const [formData, setFormData] = useState({
@@ -74,60 +116,6 @@ const ProductForm = ({ product, brands, categories, seasons, onSubmit, onCancel,
       sku: scannedSKU
     }));
     setShowScanner(false);
-  };
-
-  const SKUScanner = () => {
-    const [scannedCode, setScannedCode] = useState('');
-
-    const handleScanSubmit = (e) => {
-      e.preventDefault();
-      if (scannedCode.trim()) {
-        handleScanSKU(scannedCode.trim());
-      }
-    };
-
-    if (!showScanner) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 border border-gray-200">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <Scan size={16} className="text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">SKU Kodini Kiriting</h3>
-            </div>
-            <button 
-              onClick={() => setShowScanner(false)} 
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md p-1 transition-all duration-200"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <div className="p-4">
-            <form onSubmit={handleScanSubmit} className="space-y-4">
-              <input
-                type="text"
-                value={scannedCode}
-                onChange={(e) => setScannedCode(e.target.value)}
-                placeholder="SKU kodini kiriting..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={() => setShowScanner(false)}>
-                  Bekor qilish
-                </Button>
-                <Button type="submit" variant="primary" size="sm">
-                  Qo'shish
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -299,7 +287,11 @@ const ProductForm = ({ product, brands, categories, seasons, onSubmit, onCancel,
         </div>
       </form>
 
-      <SKUScanner />
+      <SKUScanner
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={handleScanSKU}
+      />
     </>
   );
 };

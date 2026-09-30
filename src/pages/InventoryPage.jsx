@@ -417,6 +417,16 @@ export default function InventoryPage() {
     }
   }, [productsLoading, pagination.pages, currentPage, handlePageChange]);
 
+  // One save at a time: a double tap on "Saqlash" created duplicate products.
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const guard = (fn) => async (...args) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try { return await fn(...args); } finally { savingRef.current = false; setSaving(false); }
+  };
+
   const handleAddProduct = useCallback(async (productData) => {
     try {
       const response = await productsAPI.createProduct(productData);
@@ -521,7 +531,7 @@ export default function InventoryPage() {
       width: '18%',
       render: (_, product) => {
         const variants = product.variants || [];
-        if (variants.length === 0) return <span className="text-xs text-gray-400">Variant yo'q</span>;
+        if (variants.length === 0) return <span className="text-xs text-gray-500">Variant yo'q</span>;
         const colorsList = uniqueBy(variants, 'color_name');
         const sizesList = uniqueBy(variants, 'size_name').map(v => v.size_name);
         return (
@@ -562,7 +572,7 @@ export default function InventoryPage() {
     },
     {
       key: 'stock_quantity',
-      label: 'Zapas',
+      label: 'Qoldiq',
       width: '12%',
       render: (_, product) => {
         const { total, count, low, out } = summarizeStock(product);
@@ -652,7 +662,7 @@ export default function InventoryPage() {
           <Card padding="sm">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex-1 min-w-[220px]">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                 <Input
                   placeholder="Nomi, SKU yoki brend bo'yicha qidirish..."
                   value={searchTerm}
@@ -720,7 +730,8 @@ export default function InventoryPage() {
             brands={brands || []}
             categories={categories || []}
             seasons={seasons || []}
-            onSubmit={handleAddProduct}
+            onSubmit={guard(handleAddProduct)}
+            loading={saving}
             onCancel={() => setShowAddModal(false)}
           />
         </Modal>
@@ -739,7 +750,8 @@ export default function InventoryPage() {
             product={newProduct}
             colors={colors}
             sizes={sizes}
-            onSubmit={handleCreateVariants}
+            onSubmit={guard(handleCreateVariants)}
+            loading={saving}
             onCancel={() => {
               setShowVariantModal(false);
               setNewProduct(null);
@@ -759,7 +771,8 @@ export default function InventoryPage() {
             brands={brands || []}
             categories={categories || []}
             seasons={seasons || []}
-            onSubmit={handleEditProduct}
+            onSubmit={guard(handleEditProduct)}
+            loading={saving}
             onCancel={() => setEditingProduct(null)}
           />
         </Modal>

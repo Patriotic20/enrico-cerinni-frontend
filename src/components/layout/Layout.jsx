@@ -23,7 +23,7 @@ const Layout = () => {
       {/* Main content */}
       <main className="flex-1 ml-0 bg-gray-50 min-h-screen md:ml-48">
         <Header onMenuClick={handleMenuClick} />
-        <div className="p-6">
+        <div className="px-4 py-4 lg:p-6">
           <Suspense fallback={<div className="py-12 text-center text-gray-500">Yuklanmoqda...</div>}>
             <Outlet />
           </Suspense>

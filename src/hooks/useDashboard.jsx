@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useApi } from './useApi';
 import { dashboardAPI } from '../api';
 
 export function useDashboard() {
@@ -37,7 +36,11 @@ export function useDashboard() {
     salesPerformance: false,
     expenseBreakdown: false,
   });
-  const { loading, error, callApi } = useApi();
+  // Page-level spinner/error cover the first load and stats only; charts have
+  // their own chartLoading, so a period change or one failing chart doesn't
+  // blank the whole dashboard.
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const CHART_FETCHERS = {
     cashflow: (period) => dashboardAPI.getCashflowData(period),
@@ -49,7 +52,7 @@ export function useDashboard() {
   const loadChart = async (key, period) => {
     setChartLoading(prev => ({ ...prev, [key]: true }));
     try {
-      const response = await callApi(() => CHART_FETCHERS[key](period));
+      const response = await CHART_FETCHERS[key](period);
       setChartData(prev => ({
         ...prev,
         [key]: response?.success ? (response.data || []) : [],
@@ -69,16 +72,20 @@ export function useDashboard() {
   };
 
   const loadDashboardData = async () => {
+    setLoading(true);
+    setError(null);
     try {
       // Fire stats, transactions and charts together instead of serially —
       // they are independent, so a waterfall just adds round-trips.
       const [statsResult, transactionsResult] = await Promise.allSettled([
-        callApi(dashboardAPI.getStats),
-        callApi(() => dashboardAPI.getRecentTransactions(10)),
+        dashboardAPI.getStats(),
+        dashboardAPI.getRecentTransactions(10),
         loadChartData(),
       ]);
 
-      if (statsResult.status === 'fulfilled') {
+      if (statsResult.status === 'rejected') {
+        setError(statsResult.reason?.message || "Ma'lumotlarni yuklab bo'lmadi");
+      } else {
         const statsResponse = statsResult.value;
         if (statsResponse.success && statsResponse.data) {
           const apiData = statsResponse.data;
@@ -104,6 +111,8 @@ export function useDashboard() {
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

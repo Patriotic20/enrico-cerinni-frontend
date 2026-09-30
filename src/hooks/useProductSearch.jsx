@@ -1,77 +1,77 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { productsAPI } from '../api';
 import { toArray } from '../utils/api';
+import { isBarcode } from '../utils/barcode';
 import { SEARCH_CONFIG } from '../utils/constants';
 
-export const useProductSearch = () => {
+// skipBarcodes: the POS resolves scans by exact SKU first and only text-searches
+// on a miss, so a scan doesn't fire both requests.
+export const useProductSearch = ({ skipBarcodes = false } = {}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  // Only the latest request may write results — a slow earlier search must
+  // not overwrite what the cashier typed since.
+  const requestIdRef = useRef(0);
+  // Default list, kept so clearing the input after each scan doesn't refetch it.
+  const recentRef = useRef(null);
 
-  const searchProducts = useCallback(async (term) => {
+  const load = useCallback(async (params) => {
+    const id = ++requestIdRef.current;
+    setSearchLoading(true);
+    try {
+      const response = await productsAPI.getProducts({ page: 1, size: SEARCH_CONFIG.MAX_LIMIT, ...params });
+      const items = response.success ? toArray(response.data) : [];
+      if (id === requestIdRef.current) setSearchResults(items);
+      return items;
+    } catch (error) {
+      console.error('Error loading products:', error);
+      if (id === requestIdRef.current) setSearchResults([]);
+      return [];
+    } finally {
+      if (id === requestIdRef.current) setSearchLoading(false);
+    }
+  }, []);
+
+  const searchProducts = useCallback((term) => {
     if (!term.trim()) {
       setSearchResults([]);
       return;
     }
-
-    setSearchLoading(true);
-    try {
-      const response = await productsAPI.getProducts({ 
-        search: term, 
-        page: 1,
-        size: SEARCH_CONFIG.MAX_LIMIT // Use MAX_LIMIT for search to show more results
-      });
-      
-      setSearchResults(response.success ? toArray(response.data) : []);
-    } catch (error) {
-      console.error('Error searching products:', error);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
+    return load({ search: term });
+  }, [load]);
 
   const getRecentProducts = useCallback(async () => {
-    setSearchLoading(true);
-    try {
-      const response = await productsAPI.getProducts({ 
-        page: 1,
-        size: SEARCH_CONFIG.MAX_LIMIT, // Use MAX_LIMIT to show more recent products
-        sort_by: 'created_at',
-        sort_order: 'desc'
-      });
+    const items = await load({ sort_by: 'created_at', sort_order: 'desc' });
+    if (items.length) recentRef.current = items; // a failed load must not cache an empty grid
+  }, [load]);
 
-      setSearchResults(response.success ? toArray(response.data) : []);
-    } catch (error) {
-      console.error('Error loading recent products:', error);
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
+  useEffect(() => { getRecentProducts(); }, [getRecentProducts]);
 
-  // Debounced search effect. It also covers the initial load (empty term falls
-  // through to getRecentProducts), so no separate mount effect is needed —
-  // having both fired the same request twice on every mount.
+  // Debounced search. An empty term shows the cached default list (null while
+  // its fetch is in flight).
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchTerm.trim()) {
-        searchProducts(searchTerm);
-      } else {
-        getRecentProducts();
+    const term = searchTerm.trim();
+    if (!term) {
+      if (recentRef.current) {
+        requestIdRef.current++; // drop any in-flight search
+        setSearchResults(recentRef.current);
+        setSearchLoading(false);
       }
-    }, SEARCH_CONFIG.DEBOUNCE_DELAY);
+      return;
+    }
+    if (skipBarcodes && isBarcode(term)) return;
 
+    const timeoutId = setTimeout(() => searchProducts(term), SEARCH_CONFIG.DEBOUNCE_DELAY);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, searchProducts, getRecentProducts]);
+  }, [searchTerm, searchProducts, skipBarcodes]);
 
-  // Back to the default list. Emptying the results left a blank grid when the
-  // term was already '' (the effect above never re-fired); reloading also
-  // picks up stock changed by the sale that just finished.
+  // Back to the default list, refetched so stock sold in the finished sale shows.
   const clearSearch = useCallback(() => {
-    setSearchTerm('');
+    recentRef.current = null;
     getRecentProducts();
+    setSearchTerm('');
   }, [getRecentProducts]);
 
   return {
@@ -85,4 +85,4 @@ export const useProductSearch = () => {
     searchProducts,
     getRecentProducts,
   };
-}; 
+};

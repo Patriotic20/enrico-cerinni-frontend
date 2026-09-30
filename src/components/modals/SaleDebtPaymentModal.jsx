@@ -148,10 +148,9 @@ export default function SaleDebtPaymentModal({
                 </Button>
                 <Button
                   type="submit"
-                  variant="default"
+                  variant="success"
                   disabled={loading || !paymentAmount || Number(paymentAmount) <= 0}
                   loading={loading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {loading ? 'To\'lanmoqda...' : 'To\'lovni amalga oshirish'}
                 </Button>

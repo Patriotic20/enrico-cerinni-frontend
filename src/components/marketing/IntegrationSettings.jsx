@@ -3,6 +3,7 @@ import { Smartphone, Bot, Lock, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Card } from '../ui';
 import { marketingAPI } from '../../api/marketing';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 // Secrets are write-only: the API only reports whether they are set, so the
 // password/token inputs start empty and an empty input means "keep current".
@@ -21,6 +22,7 @@ const Field = ({ label, hint, ...props }) => (
 const errorText = (e) => e?.response?.data?.detail || e?.response?.data?.message || 'Saqlashda xatolik';
 
 const IntegrationSettings = ({ onSaved }) => {
+  const confirm = useConfirm();
   const [current, setCurrent] = useState(null);
   const [saving, setSaving] = useState(null); // 'eskiz' | 'telegram' | null
   const [eskiz, setEskiz] = useState({ email: '', password: '', sender: '' });
@@ -97,7 +99,7 @@ const IntegrationSettings = ({ onSaved }) => {
           <div className="flex justify-end gap-2">
             {current.eskiz.source === 'platform' && (
               <Button type="button" variant="outline" size="sm" disabled={Boolean(saving)}
-                onClick={() => window.confirm("Eskiz sozlamalari o'chirilsinmi?") &&
+                onClick={async () => (await confirm({ title: "Eskiz sozlamalarini o'chirish", message: "Eskiz sozlamalari o'chirilsinmi?", confirmText: "Ha, o'chirish" })) &&
                   save('eskiz', { eskiz_email: '', eskiz_password: '', sms_from_number: '' })}>
                 <Trash2 size={14} className="mr-1" /> O'chirish
               </Button>
@@ -122,7 +124,7 @@ const IntegrationSettings = ({ onSaved }) => {
           <div className="flex justify-end gap-2">
             {current.telegram.source === 'platform' && (
               <Button type="button" variant="outline" size="sm" disabled={Boolean(saving)}
-                onClick={() => window.confirm("Telegram bot tokeni o'chirilsinmi?") && save('telegram', { telegram_bot_token: '' })}>
+                onClick={async () => (await confirm({ title: "Bot tokenini o'chirish", message: "Telegram bot tokeni o'chirilsinmi?", confirmText: "Ha, o'chirish" })) && save('telegram', { telegram_bot_token: '' })}>
                 <Trash2 size={14} className="mr-1" /> O'chirish
               </Button>
             )}

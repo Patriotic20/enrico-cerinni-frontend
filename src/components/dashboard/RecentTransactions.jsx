@@ -28,12 +28,12 @@ export default function RecentTransactions({ transactions }) {
                 )}
                 <span>
                   {transaction.type === 'sale' 
-                    ? `${transaction.client || 'Unknown'}ga sotuv`
-                    : `${transaction.supplier || 'Unknown'}dan xarid`
+                    ? `${transaction.client || "Noma'lum"}ga sotuv`
+                    : `${transaction.supplier || "Noma'lum"}dan xarid`
                   }
                 </span>
               </div>
-              <span className="text-[10px] text-gray-400 pl-5">
+              <span className="text-[10px] text-gray-500 pl-5">
                 {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}
               </span>
             </div>

@@ -31,7 +31,7 @@ export default function TimePeriodSelector({ selectedPeriod, onPeriodChange, cla
         </span>
         <ChevronDown 
           size={12}
-          className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 

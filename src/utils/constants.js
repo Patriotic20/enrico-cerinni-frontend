@@ -67,6 +67,7 @@ export const ROUTES = {
   SETTINGS: '/settings',
   DEBTS: '/debts',
   EMPLOYEES: '/employees',
+  LABELS: '/labels',
   SETTINGS_CATEGORIES: '/settings/categories',
   SETTINGS_BRANDS: '/settings/brands',
   SETTINGS_COLORS: '/settings/colors',
@@ -92,6 +93,7 @@ export const NAVIGATION_ITEMS = [
   { name: 'Hisobotlar', href: ROUTES.REPORTS, icon: 'BarChart3', staffOnly: true, group: 'Hisob-kitob' },
   { name: 'Xodimlar', href: ROUTES.EMPLOYEES, icon: 'UserCheck', staffOnly: true, group: 'Boshqaruv' },
   { name: 'Inventar', href: ROUTES.INVENTORY, icon: 'Package', staffOnly: true, group: 'Boshqaruv' },
+  { name: 'Shtrix-kodlar', href: ROUTES.LABELS, icon: 'Barcode', staffOnly: true, group: 'Boshqaruv' },
   { name: 'Marketing', href: ROUTES.MARKETING, icon: 'MessageSquare', staffOnly: true, group: 'Boshqaruv' },
   { name: 'Sozlamalar', href: ROUTES.SETTINGS, icon: 'Settings', staffOnly: true, group: 'Boshqaruv' },
 ];

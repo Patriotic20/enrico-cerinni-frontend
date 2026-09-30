@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, X, Printer } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Table from '../components/tables/Table';
 import Button from '../components/ui/Button';
@@ -607,6 +607,14 @@ export default function InventoryPage() {
           </button>
           <button
             className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={(e) => { e.stopPropagation(); navigate(`/labels?product=${product.id}`); }}
+            title="Shtrix-kod chop etish"
+            aria-label="Shtrix-kod chop etish"
+          >
+            <Printer size={16} />
+          </button>
+          <button
+            className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             onClick={(e) => { e.stopPropagation(); setEditingProduct(product); }}
             title="Tahrirlash"
             aria-label="Tahrirlash"
@@ -624,7 +632,7 @@ export default function InventoryPage() {
         </div>
       )
     }
-  ], [handleViewProduct, handleDeleteProduct]);
+  ], [handleViewProduct, handleDeleteProduct, navigate]);
 
   if (authLoading) {
     return (

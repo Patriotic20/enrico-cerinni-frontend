@@ -13,5 +13,6 @@ export { productVariantsAPI } from './productVariants';
 export { brandsAPI } from './brands';
 export { colorsAPI } from './colors';
 export { seasonsAPI } from './seasons';
+export { labelsAPI } from './labels';
 export * as reportsAPI from './reports';
 export { default as api } from './client'; 

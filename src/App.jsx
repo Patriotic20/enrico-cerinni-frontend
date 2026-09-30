@@ -26,6 +26,7 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage'));
 const EmployeeDetailPage = lazy(() => import('./pages/EmployeeDetailPage'));
+const BarcodeLabelsPage = lazy(() => import('./pages/BarcodeLabelsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 // Seller mobile app: own login (phone + PIN), own layout, under /m
 const SellerApp = lazy(() => import('./pages/SellerApp'));
@@ -111,6 +112,7 @@ const App = () => {
                       <Route path="/reports" element={<ReportsPage />} />
                       <Route path="/employees" element={<EmployeesPage />} />
                       <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+                      <Route path="/labels" element={<BarcodeLabelsPage />} />
                       <Route path="/settings/*" element={<SettingsPage />} />
                     </Route>
                   </Route>

@@ -13,7 +13,8 @@ import {
   AlertCircle,
   BarChart3,
   UserCheck,
-  ScanSearch
+  ScanSearch,
+  Barcode
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAVIGATION_ITEMS, isStaff } from '../../utils/constants';
@@ -31,6 +32,7 @@ const iconMap = {
   BarChart3,
   UserCheck,
   ScanSearch,
+  Barcode,
 };
 
 const ROLE_LABELS = { admin: 'Administrator', manager: 'Menejer', user: 'Kassir' };

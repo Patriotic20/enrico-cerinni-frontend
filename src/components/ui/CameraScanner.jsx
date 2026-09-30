@@ -2,9 +2,21 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// ponytail: native BarcodeDetector (Chrome/Android/Edge). iOS Safari lacks it —
-// camera button hides there; add a JS decoder (e.g. zxing) if iPhones matter.
-export const CAN_SCAN = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+// Camera needs a secure context (HTTPS or localhost); mediaDevices is undefined otherwise.
+export const CAN_SCAN = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+
+// Native BarcodeDetector where it exists (Chrome/Android/Edge); iOS WebKit has none,
+// so lazy-load the zxing-wasm ponyfill with the same API. The .wasm ships in our
+// bundle instead of the default jsDelivr fetch.
+const createDetector = async () => {
+  if ('BarcodeDetector' in window) return new window.BarcodeDetector();
+  const [{ BarcodeDetector, prepareZXingModule }, { default: wasmUrl }] = await Promise.all([
+    import('barcode-detector/ponyfill'),
+    import('zxing-wasm/reader/zxing_reader.wasm?url'),
+  ]);
+  prepareZXingModule({ overrides: { locateFile: (path, prefix) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) } });
+  return new BarcodeDetector();
+};
 
 // Full-screen rear-camera scanner; calls onDetect once with the first code seen.
 export const CameraScanner = ({ onDetect, onClose }) => {
@@ -17,10 +29,10 @@ export const CameraScanner = ({ onDetect, onClose }) => {
     let stream;
     let timer;
     let stopped = false;
-    const detector = new window.BarcodeDetector();
 
     (async () => {
       try {
+        const detector = await createDetector();
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (stopped) return stream.getTracks().forEach((t) => t.stop());
         videoRef.current.srcObject = stream;

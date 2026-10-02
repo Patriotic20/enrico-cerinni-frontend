@@ -37,13 +37,18 @@ export const CameraScanner = ({ onDetect, onClose }) => {
     let stream;
     let stopped = false;
     let frame = 0;
+    let failures = 0;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const workers = Array.from({ length: WORKERS }, () => {
       const w = new Worker(new URL('./scanWorker.js', import.meta.url), { type: 'module' });
       w.busy = false;
+      // A worker that never loads must not leave the scanner silently "busy".
+      w.onerror = (e) => fail(e.message || 'worker');
       w.onmessage = ({ data }) => {
         w.busy = false;
+        failures = data.error ? failures + 1 : 0;
+        if (failures === 10) fail(data.error);
         if (data.text && !stopped) {
           stopped = true;
           navigator.vibrate?.(80);
@@ -52,6 +57,14 @@ export const CameraScanner = ({ onDetect, onClose }) => {
       };
       return w;
     });
+
+    const fail = (reason) => {
+      if (stopped) return;
+      stopped = true;
+      console.error('Barcode decoder failed:', reason);
+      toast.error("Skaner ishlamadi. Sahifani yangilang yoki kodni qo'lda kiriting.");
+      cb.current.onClose();
+    };
 
     const grab = (video, thorough) => {
       const vw = video.videoWidth;

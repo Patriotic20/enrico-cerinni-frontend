@@ -17,12 +17,15 @@ const THOROUGH = { formats: FORMATS, tryHarder: true, maxNumberOfSymbols: 1 };
 
 self.onmessage = async ({ data: { buffer, width, height, thorough } }) => {
   let text = null;
+  let error = null;
   try {
     const image = { data: new Uint8ClampedArray(buffer), width, height, colorSpace: 'srgb' };
     const [hit] = await readBarcodes(image, thorough ? THOROUGH : FAST);
     text = hit?.isValid ? hit.text : null;
-  } catch {
-    // bad frame: report a miss, the next frame tries again
+  } catch (e) {
+    // Usually a bad frame (next one retries), but a decoder that can't start
+    // (e.g. CSP blocking WebAssembly) fails every time: report it.
+    error = String(e?.message || e);
   }
-  self.postMessage({ text });
+  self.postMessage({ text, error });
 };

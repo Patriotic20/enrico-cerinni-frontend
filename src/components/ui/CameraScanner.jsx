@@ -5,26 +5,6 @@ import toast from 'react-hot-toast';
 // Camera needs a secure context (HTTPS or localhost); mediaDevices is undefined otherwise.
 export const CAN_SCAN = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
-// Retail codes only: fewer formats = faster, fewer false reads.
-const FORMATS = ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'qr_code', 'data_matrix'];
-
-// Native BarcodeDetector where it exists (Chrome/Android/Edge on Mac); Windows Chrome
-// and iOS WebKit have none, so lazy-load the zxing-wasm ponyfill with the same API.
-// The .wasm ships in our bundle instead of the default jsDelivr fetch.
-const createDetector = async () => {
-  if ('BarcodeDetector' in window) {
-    const supported = await window.BarcodeDetector.getSupportedFormats().catch(() => []);
-    const formats = FORMATS.filter((f) => supported.includes(f));
-    if (formats.includes('code_128')) return new window.BarcodeDetector({ formats });
-  }
-  const [{ BarcodeDetector, prepareZXingModule }, { default: wasmUrl }] = await Promise.all([
-    import('barcode-detector/ponyfill'),
-    import('zxing-wasm/reader/zxing_reader.wasm?url'),
-  ]);
-  prepareZXingModule({ overrides: { locateFile: (path, prefix) => (path.endsWith('.wasm') ? wasmUrl : prefix + path) } });
-  return new BarcodeDetector({ formats: FORMATS });
-};
-
 // Default getUserMedia is often 640x480: ~1px per bar on a label, unreadable.
 // Ask for 1080p and continuous focus; browsers fall back to what the camera has.
 const VIDEO = {
@@ -34,9 +14,13 @@ const VIDEO = {
   advanced: [{ focusMode: 'continuous' }],
 };
 
-// Centre crop that is decoded (fractions of the frame); every 3rd pass scans the
-// whole frame in case the code sits outside the guide box.
+// Centre crop that is decoded (fractions of the frame), matching the guide box.
 const ROI = { w: 0.85, h: 0.5 };
+// Every Nth frame gets the slow, thorough decode of the whole frame (blur, tilt, code outside the box).
+const THOROUGH_EVERY = 6;
+// Two decoders in flight: a phone CPU decodes one frame while the next is prepared.
+// ponytail: fixed 2 workers; tune from navigator.hardwareConcurrency if low-end phones lag.
+const WORKERS = 2;
 
 // Full-screen rear-camera scanner; calls onDetect once with the first code seen.
 export const CameraScanner = ({ onDetect, onClose }) => {
@@ -51,48 +35,64 @@ export const CameraScanner = ({ onDetect, onClose }) => {
 
   useEffect(() => {
     let stream;
-    let timer;
     let stopped = false;
+    let frame = 0;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const workers = Array.from({ length: WORKERS }, () => {
+      const w = new Worker(new URL('./scanWorker.js', import.meta.url), { type: 'module' });
+      w.busy = false;
+      w.onmessage = ({ data }) => {
+        w.busy = false;
+        if (data.text && !stopped) {
+          stopped = true;
+          navigator.vibrate?.(80);
+          cb.current.onDetect(data.text.trim());
+        }
+      };
+      return w;
+    });
+
+    const grab = (video, thorough) => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const sw = thorough ? vw : Math.round(vw * ROI.w);
+      const sh = thorough ? vh : Math.round(vh * ROI.h);
+      canvas.width = sw;
+      canvas.height = sh;
+      ctx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, sw, sh);
+      return ctx.getImageData(0, 0, sw, sh);
+    };
+
+    // Runs once per camera frame (requestVideoFrameCallback), not on a timer.
+    const onFrame = () => {
+      if (stopped) return;
+      const video = videoRef.current;
+      const idle = workers.find((w) => !w.busy);
+      if (idle && video.videoWidth) {
+        const thorough = frame++ % THOROUGH_EVERY === THOROUGH_EVERY - 1;
+        const img = grab(video, thorough);
+        idle.busy = true;
+        idle.postMessage({ buffer: img.data.buffer, width: img.width, height: img.height, thorough }, [img.data.buffer]);
+      }
+      schedule();
+    };
+    const schedule = () => {
+      const video = videoRef.current;
+      if (stopped || !video) return;
+      if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(onFrame);
+      else requestAnimationFrame(onFrame);
+    };
 
     (async () => {
       try {
-        const detector = await createDetector();
         stream = await navigator.mediaDevices.getUserMedia({ video: VIDEO });
         if (stopped) return stream.getTracks().forEach((t) => t.stop());
         trackRef.current = stream.getVideoTracks()[0];
         setCaps(trackRef.current.getCapabilities?.() || {});
-        const video = videoRef.current;
-        video.srcObject = stream;
-        await video.play();
-
-        let pass = 0;
-        // Sequential loop: never starts a decode before the previous one finished.
-        const tick = async () => {
-          if (stopped) return;
-          const vw = video.videoWidth;
-          const vh = video.videoHeight;
-          let source = video;
-          if (vw && pass++ % 3 !== 2) {
-            const sw = Math.round(vw * ROI.w);
-            const sh = Math.round(vh * ROI.h);
-            canvas.width = sw;
-            canvas.height = sh;
-            ctx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, sw, sh);
-            source = canvas;
-          }
-          const codes = vw ? await detector.detect(source).catch(() => []) : [];
-          const value = codes[0]?.rawValue?.trim();
-          if (value && !stopped) {
-            stopped = true;
-            navigator.vibrate?.(80);
-            cb.current.onDetect(value);
-            return;
-          }
-          timer = setTimeout(tick, 60);
-        };
-        tick();
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        schedule();
       } catch {
         toast.error('Kameraga ruxsat berilmadi');
         cb.current.onClose();
@@ -101,7 +101,7 @@ export const CameraScanner = ({ onDetect, onClose }) => {
 
     return () => {
       stopped = true;
-      clearTimeout(timer);
+      workers.forEach((w) => w.terminate());
       stream?.getTracks().forEach((t) => t.stop());
     };
   }, []);

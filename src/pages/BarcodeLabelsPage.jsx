@@ -46,7 +46,7 @@ const LABEL_CSS = `
 .lbl .n{font-weight:600}
 .lbl .p{font-weight:700;font-size:1.35em}
 .lbl .s{font-size:.8em;letter-spacing:.5px}
-.lbl svg{display:block;max-width:100%;flex-shrink:0}
+.lbl svg{display:block;max-width:100%;flex-shrink:1;min-height:5mm}
 .lbl.m2d{flex-direction:row;gap:1.5mm}
 .lbl.m2d svg{max-height:100%}
 .lbl.m2d .t{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:.4mm;text-align:left}
@@ -138,11 +138,31 @@ function fitA4(t) {
 
 const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
 
-function printLabels(items, t) {
+// Thermal drivers (XPrinter etc.) rotate pages that are wider than tall. `rotate` is a per-printer
+// knob: 'driver' lets the driver's paper setting decide, '90'/'-90' send a portrait page with the
+// sheet turned inside it.
+const ROTATE_KEY = 'label-rotate';
+const ROTATIONS = [
+  ['none', 'Oddiy'],
+  ['driver', 'Printer qog\'ozi bo\'yicha'],
+  ['90', '90° burish'],
+  ['-90', '-90° burish'],
+];
+const readRotate = () => { try { return localStorage.getItem(ROTATE_KEY) || 'none'; } catch { return 'none'; } };
+
+function rotateCss(lay, rotate) {
+  if (rotate === 'driver') return '@page{size:auto;margin:0}';
+  if (rotate !== '90' && rotate !== '-90') return lay.pageCss;
+  const turn = rotate === '90' ? 'rotate(90deg) translateY(-100%)' : 'rotate(-90deg) translateX(-100%)';
+  return `@page{size:${lay.pageH}mm ${lay.pageW}mm;margin:0}.sheet{width:${lay.pageW}mm;height:${lay.pageH}mm;transform-origin:top left;transform:${turn}}`;
+}
+
+function printLabels(items, t, rotate) {
   const lay = pageLayout(t);
   const labels = items.flatMap((it) => Array(it.qty).fill(labelHtml(it, t)));
   const body = chunk(labels, lay.perPage).map((page) => `<div class="sheet">${page.join('')}</div>`).join('');
-  const css = `${lay.pageCss}${lay.sheetCss}.sheet:not(:last-child){break-after:page}.lbl{break-inside:avoid}`;
+  const pageCss = t.mode === 'roll' ? rotateCss(lay, rotate) : lay.pageCss;
+  const css = `${lay.sheetCss}${pageCss}.sheet:not(:last-child){break-after:page}.lbl{break-inside:avoid}`;
 
   // Own iframe: the app's global @media print rule only shows #receipt.
   document.getElementById('label-print-frame')?.remove();
@@ -199,6 +219,7 @@ const BarcodeLabelsPage = () => {
   const [searchParams] = useSearchParams();
   const [tpl, setTpl] = useState(DEFAULT_TEMPLATE);
   const [saving, setSaving] = useState(false);
+  const [rotate, setRotate] = useState(readRotate);
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -281,7 +302,7 @@ const BarcodeLabelsPage = () => {
       title="Shtrix-kodlar"
       subtitle="Yorliq shablonini sozlang va chop eting"
       actions={
-        <Button onClick={() => printLabels(items.filter((i) => i.qty > 0), tpl)} disabled={!total}>
+        <Button onClick={() => printLabels(items.filter((i) => i.qty > 0), tpl, rotate)} disabled={!total}>
           <Printer size={16} className="mr-2" />
           Chop etish ({total})
         </Button>
@@ -317,6 +338,22 @@ const BarcodeLabelsPage = () => {
               ))}
             </div>
           </div>
+
+          {tpl.mode === 'roll' && (
+            <label className="block">
+              <span className="block text-xs font-medium text-gray-600 mb-1">Chop etish yo'nalishi (shu qurilma uchun)</span>
+              <select
+                className={inputCls}
+                value={rotate}
+                onChange={(e) => {
+                  setRotate(e.target.value);
+                  try { localStorage.setItem(ROTATE_KEY, e.target.value); } catch { /* private mode */ }
+                }}
+              >
+                {ROTATIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+              </select>
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <NumField label="Eni (mm)" value={tpl.width_mm} onChange={set('width_mm')} min={15} max={120} />

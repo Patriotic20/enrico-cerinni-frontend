@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Printer, Save, Search, Trash2, X } from 'lucide-react';
+import { Printer, Save, Search, Trash2, Usb, X } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 import { datamatrix, qrcode, drawingSVG } from 'bwip-js';
 import toast from 'react-hot-toast';
@@ -122,7 +122,8 @@ function pageLayout(t) {
     cols, margin, pageW, pageH,
     perPage: cols * rows,
     overflow: !roll && (gridW > A4.w - 2 * margin + 0.01 || gridH > A4.h - 2 * margin + 0.01),
-    sheetCss: `.sheet{display:grid;grid-template-columns:repeat(${cols},${t.width_mm}mm);grid-auto-rows:${t.height_mm}mm;gap:${t.a4_gap_mm}mm}`,
+    sheetCss: `.sheet{display:grid;grid-template-columns:repeat(${cols},${t.width_mm}mm);grid-auto-rows:${t.height_mm}mm;gap:${t.a4_gap_mm}mm${roll ? `;height:${pageH - 0.5}mm;overflow:hidden` : ''}}`,
+    // ponytail: roll sheet 0.5mm short of the page so driver margins/rounding (macOS) never spill onto a 2nd label
     pageCss: roll ? `@page{size:${pageW}mm ${pageH}mm;margin:0}` : `@page{size:A4;margin:${margin}mm}`,
   };
 }
@@ -180,6 +181,75 @@ function printLabels(items, t, rotate) {
   frame.contentWindow.print();
 }
 
+// Direct thermal printing over WebUSB (Chrome/Edge): each roll page is rendered from the same HTML
+// as the preview, turned into a 1-bit bitmap and sent as TSPL, so no OS driver or paper-size setup
+// is needed and the printer stops on the label gap.
+const DOTS_PER_MM = 8; // 203 dpi (XP-365B)
+const CSS_PX_PER_MM = 96 / 25.4;
+const LABEL_GAP_MM = 2; // ponytail: common roll gap; make it a template field if a roll differs
+
+async function rasterize(html, css, wMm, hMm) {
+  const w = Math.round(wMm * DOTS_PER_MM);
+  const h = Math.round(hMm * DOTS_PER_MM);
+  // Inside XHTML an <svg> without xmlns would be an unknown HTML tag and render nothing.
+  html = html.replace(/<svg(?![^>]*xmlns=)/g, '<svg xmlns="http://www.w3.org/2000/svg"');
+  const svg =`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${wMm * CSS_PX_PER_MM} ${hMm * CSS_PX_PER_MM}">`
+    + `<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${html}</div></foreignObject></svg>`;
+  const img = new Image();
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+
+  const wb = Math.ceil(w / 8);
+  const bits = new Uint8Array(wb * h).fill(0xff); // TSPL BITMAP: 1 = blank, 0 = burn
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (px[i] + px[i + 1] + px[i + 2] < 384) bits[y * wb + (x >> 3)] &= ~(0x80 >> (x & 7));
+    }
+  }
+  return { wb, h, bits };
+}
+
+// First call asks the user to pick the printer; Chrome remembers it for the next prints.
+async function usbPrinter() {
+  const [known] = await navigator.usb.getDevices();
+  const dev = known || await navigator.usb.requestDevice({ filters: [] });
+  if (!dev.opened) await dev.open();
+  if (!dev.configuration) await dev.selectConfiguration(1);
+  for (const iface of dev.configuration.interfaces) {
+    const ep = iface.alternate.endpoints.find((e) => e.direction === 'out' && e.type === 'bulk');
+    if (!ep) continue;
+    if (!iface.claimed) await dev.claimInterface(iface.interfaceNumber);
+    return (data) => dev.transferOut(ep.endpointNumber, data);
+  }
+  throw new Error('USB printer endpoint not found');
+}
+
+async function printLabelsUsb(items, t) {
+  const send = await usbPrinter(); // before any slow work: requestDevice needs the click's user activation
+  const lay = pageLayout(t);
+  const css = LABEL_CSS + lay.sheetCss;
+  const pages = chunk(items.flatMap((it) => Array(it.qty).fill(labelHtml(it, t))), lay.perPage)
+    .map((page) => `<div class="sheet">${page.join('')}</div>`);
+
+  // Consecutive identical pages (one variant x qty) go out as one bitmap with a copy count.
+  for (let i = 0, n; i < pages.length; i += n) {
+    for (n = 1; pages[i + n] === pages[i]; n++);
+    const { wb, h, bits } = await rasterize(pages[i], css, lay.pageW, lay.pageH);
+    const head = `SIZE ${lay.pageW} mm,${lay.pageH} mm\r\nGAP ${LABEL_GAP_MM} mm,0 mm\r\nDIRECTION 1\r\nCLS\r\nBITMAP 0,0,${wb},${h},0,`;
+    await send(await new Blob([head, bits, `\r\nPRINT 1,${n}\r\n`]).arrayBuffer());
+  }
+}
+
 const variantToItem = (product, v) => ({
   id: v.id,
   sku: v.sku,
@@ -219,6 +289,7 @@ const BarcodeLabelsPage = () => {
   const [searchParams] = useSearchParams();
   const [tpl, setTpl] = useState(DEFAULT_TEMPLATE);
   const [saving, setSaving] = useState(false);
+  const [usbBusy, setUsbBusy] = useState(false);
   const [rotate, setRotate] = useState(readRotate);
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
@@ -285,6 +356,26 @@ const BarcodeLabelsPage = () => {
   }, [items, tpl, layout.perPage]);
   const previewZoom = Math.min(1.5, 480 / (layout.pageW * 3.78));
 
+  const handleUsbPrint = async () => {
+    setUsbBusy(true);
+    const list = items.filter((i) => i.qty > 0);
+    try {
+      await printLabelsUsb(list, tpl);
+      toast.success('Printerga yuborildi');
+    } catch (error) {
+      if (error?.name === 'NotFoundError') return; // user closed the device picker
+      if (error?.name === 'SecurityError') {
+        // OS driver owns the port (Windows usbprint.sys): fall back to the driver print.
+        toast('USB band — oddiy chop etish ochildi');
+        printLabels(list, tpl, rotate);
+        return;
+      }
+      toast.error(`USB printer: ${error?.message || error}`);
+    } finally {
+      setUsbBusy(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -302,10 +393,18 @@ const BarcodeLabelsPage = () => {
       title="Shtrix-kodlar"
       subtitle="Yorliq shablonini sozlang va chop eting"
       actions={
-        <Button onClick={() => printLabels(items.filter((i) => i.qty > 0), tpl, rotate)} disabled={!total}>
-          <Printer size={16} className="mr-2" />
-          Chop etish ({total})
-        </Button>
+        // Roll labels go straight to the thermal printer over USB; A4 (and browsers without WebUSB) use the print dialog.
+        tpl.mode === 'roll' && 'usb' in navigator ? (
+          <Button onClick={handleUsbPrint} loading={usbBusy} disabled={!total}>
+            <Usb size={16} className="mr-2" />
+            Chop etish ({total})
+          </Button>
+        ) : (
+          <Button onClick={() => printLabels(items.filter((i) => i.qty > 0), tpl, rotate)} disabled={!total}>
+            <Printer size={16} className="mr-2" />
+            Chop etish ({total})
+          </Button>
+        )
       }
     >
       <style>{LABEL_CSS + layout.sheetCss}</style>

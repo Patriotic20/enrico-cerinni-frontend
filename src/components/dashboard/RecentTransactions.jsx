@@ -1,5 +1,14 @@
 import { DollarSign, Package } from 'lucide-react';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, formatDate } from '../../utils/format';
+
+const TYPE_LABELS = {
+  sale: 'Sotuv',
+  debt_payment: "Qarz to'lovi",
+  refund: 'Qaytarish',
+  purchase: 'Xarid',
+  expense: 'Xarajat',
+};
+const OUTFLOW = ['refund', 'purchase', 'expense'];
 
 export default function RecentTransactions({ transactions }) {
   if (!transactions || transactions.length === 0) {
@@ -21,25 +30,21 @@ export default function RecentTransactions({ transactions }) {
           <div key={transaction.id} className="flex items-center justify-between px-2 py-1 rounded-md bg-gray-50 transition-colors hover:bg-gray-100">
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2 text-xs font-medium text-gray-600 truncate">
-                {transaction.type === 'sale' ? (
+                {['sale', 'debt_payment'].includes(transaction.type) ? (
                   <DollarSign size={12} className="text-green-600" />
                 ) : (
                   <Package size={12} className="text-blue-600" />
                 )}
-                <span>
-                  {transaction.type === 'sale' 
-                    ? `${transaction.client || "Noma'lum"}ga sotuv`
-                    : `${transaction.supplier || "Noma'lum"}dan xarid`
-                  }
-                </span>
+                <span className="truncate">{TYPE_LABELS[transaction.type] || transaction.type}</span>
               </div>
-              <span className="text-[10px] text-gray-500 pl-5">
-                {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}
+              <span className="text-[10px] text-gray-500 pl-5 truncate">
+                {formatDate(transaction.created_at)}{transaction.description && ` · ${transaction.description}`}
               </span>
             </div>
             <div className="text-xs font-semibold shrink-0">
-              <span className={(transaction.amount || 0) > 0 ? 'text-green-600' : 'text-red-600'}>
-                {(transaction.amount || 0) > 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount || 0))}
+              {/* Direction comes from the type: purchases are stored positive, refunds negative. */}
+              <span className={OUTFLOW.includes(transaction.type) ? 'text-red-600' : 'text-green-600'}>
+                {OUTFLOW.includes(transaction.type) ? '−' : '+'}{formatCurrency(Math.abs(transaction.amount || 0))}
               </span>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { formatCurrency } from '../../utils/format';
+import { expenseCategoryLabel } from '../../utils/constants';
 import TimePeriodSelector from './TimePeriodSelector';
 
 export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
@@ -21,7 +22,7 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
       const percentage = ((data.value / totalExpenses) * 100).toFixed(1);
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900">{data.name}</p>
+          <p className="text-sm font-medium text-gray-900">{expenseCategoryLabel(data.name)}</p>
           <p className="text-sm text-gray-600">
             {`${formatCurrency(data.value)} (${percentage}%)`}
           </p>
@@ -117,7 +118,7 @@ export default function ExpenseBreakdownChart({ data = [], selectedPeriod = '1mo
             <li key={index} className="flex items-center justify-between gap-2 text-xs">
               <span className="flex items-center gap-1.5 min-w-0">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="truncate text-gray-700">{item.name}</span>
+                <span className="truncate text-gray-700">{expenseCategoryLabel(item.name)}</span>
               </span>
               <span className="shrink-0 text-right">
                 <b className="text-gray-900">{formatCurrency(item.value)}</b>

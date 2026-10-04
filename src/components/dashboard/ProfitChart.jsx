@@ -6,12 +6,12 @@ import TimePeriodSelector from './TimePeriodSelector';
 export default function ProfitChart({ data = [], selectedPeriod = '1month', loading = false, onPeriodChange }) {
   const chartData = data;
 
-  const { avgMargin, totalProfit } = useMemo(() => ({
-    avgMargin: chartData.length > 0
-      ? chartData.reduce((acc, item) => acc + (item.margin || 0), 0) / chartData.length
-      : 0,
-    totalProfit: chartData.reduce((acc, item) => acc + (item.profit || 0), 0),
-  }), [chartData]);
+  // Margin over the whole period; averaging per-bucket margins counted empty months as 0%.
+  const { avgMargin, totalProfit } = useMemo(() => {
+    const totalProfit = chartData.reduce((acc, item) => acc + (item.profit || 0), 0);
+    const totalRevenue = chartData.reduce((acc, item) => acc + (item.revenue || 0), 0);
+    return { avgMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0, totalProfit };
+  }, [chartData]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

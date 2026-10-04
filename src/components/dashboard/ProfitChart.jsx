@@ -22,8 +22,11 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
           <p className="text-sm text-green-600">
             {`Daromad: ${formatCurrency(data?.revenue || 0)}`}
           </p>
+          <p className="text-sm text-orange-500">
+            {`Tan narx: ${formatCurrency(data?.cost_of_goods || 0)}`}
+          </p>
           <p className="text-sm text-red-600">
-            {`Xarajat: ${formatCurrency(data?.cost || 0)}`}
+            {`Xarajatlar: ${formatCurrency(data?.expenses || 0)}`}
           </p>
           <p className="text-sm text-blue-600">
             {`Foyda: ${formatCurrency(data?.profit || 0)}`}
@@ -54,8 +57,12 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
               <span className="text-gray-600">Daromad</span>
             </div>
             <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <span className="text-gray-600">Tan narx</span>
+            </div>
+            <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span className="text-gray-600">Xarajat</span>
+              <span className="text-gray-600">Xarajatlar</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -104,9 +111,16 @@ export default function ProfitChart({ data = [], selectedPeriod = '1month', load
                 animationDuration={800}
               />
               <Bar 
-                dataKey="cost" 
+                dataKey="cost_of_goods" 
+                fill="#f97316" 
+                name="Tan narx"
+                radius={[2, 2, 0, 0]}
+                animationDuration={800}
+              />
+              <Bar 
+                dataKey="expenses" 
                 fill="#ef4444" 
-                name="Xarajat"
+                name="Xarajatlar"
                 radius={[2, 2, 0, 0]}
                 animationDuration={800}
               />

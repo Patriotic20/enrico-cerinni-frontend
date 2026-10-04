@@ -137,7 +137,7 @@ export default function SalesTable({
                       <IconBtn title="Ko'rish" onClick={() => onViewSale(sale.id)} className="text-gray-500 hover:text-blue-600 hover:bg-blue-50">
                         <Eye size={16} />
                       </IconBtn>
-                      {sale.status === 'completed' && onCancelSale && (
+                      {!cancelled && onCancelSale && (
                         <IconBtn title="Bekor qilish" onClick={() => onCancelSale(sale.id)} className="text-gray-500 hover:text-red-600 hover:bg-red-50">
                           <XCircle size={16} />
                         </IconBtn>

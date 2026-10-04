@@ -136,6 +136,8 @@ export default function useSales() {
         toast.success('Sotuv muvaffaqiyatli bekor qilindi');
         loadSales();
         loadStats();
+      } else {
+        toast.error(response.message || 'Sotuvni bekor qilishda xatolik yuz berdi');
       }
     } catch (error) {
       console.error('Error cancelling sale:', error);

@@ -44,3 +44,6 @@ export const compactAmount = (value) => {
   if (abs >= 1_000) return `${(num / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}K`;
   return `${Math.round(num)}`;
 };
+
+// Product name with its brand in brackets: "Ko'ylak (Zara)".
+export const productTitle = (p) => (p?.brand_name ? `${p.name} (${p.brand_name})` : p?.name);

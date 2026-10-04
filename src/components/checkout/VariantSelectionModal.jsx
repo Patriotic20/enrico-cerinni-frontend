@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import Modal from '../modals/Modal';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, productTitle } from '../../utils/format';
 
 /**
  * Variant picker for the checkout flow.
@@ -88,6 +88,7 @@ export default function VariantSelectionModal({
       .filter(variant => selectedIds.includes(variant.id))
       .map(variant => ({
         ...product,
+        name: productTitle(product),
         id: variant.id,
         price: variant.price,
         stock_quantity: variant.stock_quantity,
@@ -128,7 +129,7 @@ export default function VariantSelectionModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={product?.name}
+      title={productTitle(product)}
       size="xl"
     >
       <div className="space-y-5">

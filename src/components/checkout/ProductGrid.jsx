@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, productTitle } from '../../utils/format';
 
 const OTHER = 'Boshqa';
 
@@ -64,8 +64,7 @@ const ProductCard = memo(({ product, meta, onAdd }) => {
       )}
 
       <span className="flex-1 min-w-0 flex flex-col">
-        <span className="text-[15px] font-semibold leading-snug text-gray-900 line-clamp-2">{product.name}</span>
-        {product.brand_name && <span className="text-xs text-gray-500 truncate">{product.brand_name}</span>}
+        <span className="text-[15px] font-semibold leading-snug text-gray-900 line-clamp-2">{productTitle(product)}</span>
 
         {(colors.length > 0 || sizes.length > 0) && (
           <span className="mt-1.5 flex items-center gap-2 min-w-0">

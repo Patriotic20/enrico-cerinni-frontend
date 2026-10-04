@@ -19,7 +19,7 @@ import { toArray } from '../utils/api';
 import { useProductSearch } from '../hooks/useProductSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { isStaff, SEARCH_CONFIG } from '../utils/constants';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, productTitle } from '../utils/format';
 import { variantStockStatus } from '../utils/stock';
 import { cn } from '../utils/cn';
 import { isBarcode } from '../utils/barcode';
@@ -75,7 +75,7 @@ const ProductCard = ({ product, open, onToggle, highlightSku, staff }) => {
             : <Package size={26} className="text-blue-500" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-gray-900">{product.name}</p>
+          <p className="truncate text-base font-semibold text-gray-900">{productTitle(product)}</p>
           <p className="truncate text-sm text-gray-500">
             {[product.brand_name, product.category_name].filter(Boolean).join(' · ') || product.sku}
           </p>

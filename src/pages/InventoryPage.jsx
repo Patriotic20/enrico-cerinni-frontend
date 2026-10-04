@@ -15,7 +15,7 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { toArray } from '../utils/api';
 import { SEARCH_CONFIG } from '../utils/constants';
 import { cn } from '../utils/cn';
-import { formatNumber } from '../utils/format';
+import { formatNumber, productTitle } from '../utils/format';
 import { summarizeVariants } from '../utils/stock';
 import toast from 'react-hot-toast';
 import { getApiErrorMessage } from '../utils/api';
@@ -506,7 +506,7 @@ export default function InventoryPage() {
       width: '28%',
       render: (value, product) => (
         <div className="min-w-0">
-          <div className="font-medium text-gray-900 truncate">{value}</div>
+          <div className="font-medium text-gray-900 truncate">{productTitle(product)}</div>
           <div className="text-xs text-gray-500 truncate">
             <span className="font-mono">{product.sku}</span>
             {product.category_name && <> · {product.category_name}</>}

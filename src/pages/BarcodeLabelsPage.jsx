@@ -11,7 +11,7 @@ import { productsAPI, labelsAPI } from '../api';
 import { toArray, getApiErrorMessage } from '../utils/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { SEARCH_CONFIG } from '../utils/constants';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, productTitle } from '../utils/format';
 import { cn } from '../utils/cn';
 
 // Mirrors LabelTemplate defaults in the backend (app/api/labels.py); used until the saved one loads.
@@ -253,7 +253,7 @@ async function printLabelsUsb(items, t) {
 const variantToItem = (product, v) => ({
   id: v.id,
   sku: v.sku,
-  name: product.name,
+  name: productTitle(product),
   color_name: v.color_name,
   size_name: v.size_name,
   price: v.price,
@@ -556,7 +556,7 @@ const BarcodeLabelsPage = () => {
                         className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
                         onClick={() => { addProduct(p); setQuery(''); setResults([]); }}
                       >
-                        <span className="truncate">{p.name}</span>
+                        <span className="truncate">{productTitle(p)}</span>
                         <span className="ml-3 shrink-0 text-xs text-gray-500">{p.variants?.length || 0} variant</span>
                       </button>
                     </li>

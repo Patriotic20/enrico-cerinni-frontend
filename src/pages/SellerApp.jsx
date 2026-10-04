@@ -23,7 +23,7 @@ import { useProductSearch } from '../hooks/useProductSearch';
 import { CameraScanner, CAN_SCAN } from '../components/ui/CameraScanner';
 import { getApiErrorMessage, toArray } from '../utils/api';
 import { isBarcode } from '../utils/barcode';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, productTitle } from '../utils/format';
 import { cn } from '../utils/cn';
 
 const money = formatCurrency;
@@ -159,7 +159,7 @@ const VariantSheet = ({ product, inBasket, onAdd, onClose }) => {
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-lg font-bold text-gray-900">{product.name}</p>
+            <p className="text-lg font-bold text-gray-900">{productTitle(product)}</p>
             <p className="text-sm text-gray-500">{product.brand_name || product.sku}</p>
           </div>
           <button onClick={onClose} aria-label="Yopish" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100">
@@ -398,7 +398,7 @@ const BasketScreen = ({ basket, setBasket, client, setClient }) => {
     setBasket((items) => items.some((i) => i.id === v.id)
       ? items.map((i) => (i.id === v.id ? { ...i, quantity: i.quantity + 1 } : i))
       : [...items, {
-        id: v.id, name: product.name, sku: v.sku, price: Number(v.price) || 0,
+        id: v.id, name: productTitle(product), sku: v.sku, price: Number(v.price) || 0,
         color_name: v.color_name, size_name: v.size_name, stock_quantity: v.stock_quantity, quantity: 1,
       }]);
     navigator.vibrate?.(30);
@@ -484,7 +484,7 @@ const BasketScreen = ({ basket, setBasket, client, setClient }) => {
                       : <Package size={24} className="text-blue-500" />}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-gray-900">{p.name}</p>
+                    <p className="truncate font-semibold text-gray-900">{productTitle(p)}</p>
                     <p className="truncate text-sm text-gray-500">{p.brand_name || p.sku}</p>
                     <p className="text-sm font-bold text-blue-600">{money(min)}</p>
                   </div>

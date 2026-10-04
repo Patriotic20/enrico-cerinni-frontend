@@ -9,7 +9,7 @@ import VariantCreationModal from '../components/modals/VariantCreationModal';
 import { useProductDetail } from '../hooks';
 import { useConfirm } from '../contexts/ConfirmContext';
 import toast from 'react-hot-toast';
-import { formatNumber } from '../utils/format';
+import { formatNumber, productTitle } from '../utils/format';
 import { summarizeVariants } from '../utils/stock';
 
 const TONES = {
@@ -129,7 +129,7 @@ export default function ProductDetailPage() {
           </button>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 m-0">{product.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 m-0">{productTitle(product)}</h1>
               <p className="text-sm text-gray-500 m-0 mt-1">
                 <span className="font-mono">{product.sku}</span>
                 {meta.map(item => <span key={item}> · {item}</span>)}

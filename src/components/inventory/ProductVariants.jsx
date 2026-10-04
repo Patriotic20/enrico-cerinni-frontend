@@ -5,6 +5,7 @@ import { useConfirm } from '../../contexts/ConfirmContext';
 import { formatNumber } from '../../utils/format';
 import { variantStockStatus } from '../../utils/stock';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 const STATUS_CELL = {
   out: 'bg-red-50 text-red-700 border-red-200',
@@ -233,13 +234,13 @@ export default function ProductVariants({
                     <td className="py-2 pr-3 font-mono text-xs text-gray-500 whitespace-nowrap">{variant.sku}</td>
                     <td className="py-2 pr-3 text-right tabular-nums whitespace-nowrap">
                       {editing
-                        ? <input type="number" value={editData.price ?? ''} onChange={setField('price', parseFloat)} className={`${numInput} min-w-[110px]`} aria-label="Narx" />
+                        ? <MoneyInput value={editData.price ?? ''} onChange={setField('price', parseFloat)} className={`${numInput} min-w-[110px]`} aria-label="Narx" />
                         : formatNumber(Math.round(price))}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-gray-500 whitespace-nowrap">
                       {editing
                         // Empty clears the cost (null), unlike other fields which fall back to 0.
-                        ? <input type="number" min="0" value={editData.cost_price ?? ''} onChange={e => setEditData(prev => ({ ...prev, cost_price: e.target.value === '' ? null : parseFloat(e.target.value) }))} className={`${numInput} min-w-[110px]`} aria-label="Tan narx" />
+                        ? <MoneyInput min="0" value={editData.cost_price ?? ''} onChange={e => setEditData(prev => ({ ...prev, cost_price: e.target.value === '' ? null : parseFloat(e.target.value) }))} className={`${numInput} min-w-[110px]`} aria-label="Tan narx" />
                         : cost != null ? formatNumber(Math.round(cost)) : '—'}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-gray-500">

@@ -3,6 +3,7 @@ import { Package } from 'lucide-react';
 import Button from '../ui/Button';
 import { validateProductVariantBulkCreate } from '../../utils/validation';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 const ProductVariantForm = ({ 
   product, 
@@ -194,8 +195,7 @@ const ProductVariantForm = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">Asosiy narx *</label>
-              <input
-                type="number"
+              <MoneyInput
                 step="0.01"
                 min="0"
                 value={basePrice}
@@ -209,8 +209,7 @@ const ProductVariantForm = ({
             
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">Asosiy tannarx</label>
-              <input
-                type="number"
+              <MoneyInput
                 step="0.01"
                 min="0"
                 value={baseCostPrice}
@@ -305,8 +304,7 @@ const ProductVariantForm = ({
                           />
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <MoneyInput
                             step="0.01"
                             min="0"
                             value={variant.price}
@@ -316,8 +314,7 @@ const ProductVariantForm = ({
                           />
                         </td>
                         <td className="px-2 py-2">
-                          <input
-                            type="number"
+                          <MoneyInput
                             step="0.01"
                             min="0"
                             value={variant.cost_price || ''}

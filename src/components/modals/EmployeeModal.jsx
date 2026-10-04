@@ -4,6 +4,7 @@ import { getApiErrorMessage } from '../../utils/api';
 import { financeAPI } from '../../api/finance';
 import Modal from './Modal';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -272,8 +273,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
               <DollarSign size={14} className="text-green-500" />
               Ish haqi *
             </label>
-            <input
-              type="number"
+            <MoneyInput
               id="salary"
               value={formData.salary}
               onChange={(e) => handleInputChange('salary', e.target.value)}
@@ -359,8 +359,7 @@ const EmployeeModal = ({ isOpen, onClose, employee = null, onSuccess }) => {
                   <Target size={14} className="text-orange-500" />
                   Oylik reja (so'm)
                 </label>
-                <input
-                  type="number"
+                <MoneyInput
                   id="monthly_target"
                   value={formData.monthly_target}
                   onChange={(e) => handleInputChange('monthly_target', e.target.value)}

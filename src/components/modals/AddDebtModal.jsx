@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import Button from '../ui/Button';
 import Input from '../forms/Input';
+import MoneyInput from '../ui/MoneyInput';
+import { formatCurrency } from '../../utils/format';
 import { AlertCircle, DollarSign, Search, User } from 'lucide-react';
 import { clientsAPI } from '../../api/clients';
 
@@ -119,7 +121,7 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
                     {client.phone && <p className="text-xs text-gray-500 m-0">{client.phone}</p>}
                   </div>
                   <span className="text-xs text-red-600">
-                    Qarz: {(Number(client.debt_amount) || 0).toFixed(2)} UZS
+                    Qarz: {formatCurrency(Number(client.debt_amount) || 0)}
                   </span>
                 </div>
               ))
@@ -131,21 +133,20 @@ export default function AddDebtModal({ isOpen, onClose, onAdded }) {
           <div className="space-y-2">
             <h3 className="text-base font-semibold">Qarz ma'lumotlari</h3>
             <p className="text-sm"><strong>Mijoz:</strong> {selectedClient.first_name} {selectedClient.last_name}</p>
-            <p className="text-sm"><strong>Joriy qarz:</strong> {currentDebt.toFixed(2)} UZS</p>
+            <p className="text-sm"><strong>Joriy qarz:</strong> {formatCurrency(currentDebt)}</p>
 
-            <Input
+            <MoneyInput
+              as={Input}
               label="Qarz summasi (UZS)"
-              type="text"
-              inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="0"
               icon={DollarSign}
             />
 
             {value > 0 && (
               <p className="text-sm text-gray-600">
-                Yangi qarz: <span className="font-semibold text-red-600">{(currentDebt + value).toFixed(2)} UZS</span>
+                Yangi qarz: <span className="font-semibold text-red-600">{formatCurrency(currentDebt + value)}</span>
               </p>
             )}
           </div>

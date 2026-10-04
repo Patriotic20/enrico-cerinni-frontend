@@ -5,6 +5,7 @@ import Input from '../forms/Input';
 import { AlertCircle, DollarSign, User } from 'lucide-react';
 import { salesAPI } from '../../api/sales';
 import { getApiErrorMessage } from '../../utils/api';
+import MoneyInput from '../ui/MoneyInput';
 
 export default function DebtPaymentModal({ 
   isOpen, 
@@ -110,9 +111,8 @@ export default function DebtPaymentModal({
 
         {/* Payment Form - Compact */}
         <div className="space-y-3">
-          <Input
+          <MoneyInput as={Input}
             label="To'lov summasi (UZS)"
-            type="number"
             min="0"
             max={debtAmount}
             value={paymentAmount}

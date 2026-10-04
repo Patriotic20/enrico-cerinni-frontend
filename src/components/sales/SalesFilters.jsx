@@ -1,6 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { ymd } from '../../hooks/useSales';
+import MoneyInput from '../ui/MoneyInput';
 
 const presets = () => {
   const now = new Date();
@@ -53,9 +54,9 @@ export default function SalesFilters({ filters, sellers = [], onFilterChange, on
           <option value="card">Karta</option>
           <option value="transfer">O'tkazma</option>
         </select>
-        <input type="number" min="0" placeholder="Min summa" value={filters.min_amount}
+        <MoneyInput min="0" placeholder="Min summa" value={filters.min_amount}
           onChange={(e) => onFilterChange('min_amount', e.target.value)} className={cn(control, 'w-32')} />
-        <input type="number" min="0" placeholder="Max summa" value={filters.max_amount}
+        <MoneyInput min="0" placeholder="Max summa" value={filters.max_amount}
           onChange={(e) => onFilterChange('max_amount', e.target.value)} className={cn(control, 'w-32')} />
         {hasExtra && (
           <button type="button" onClick={onClearFilters}

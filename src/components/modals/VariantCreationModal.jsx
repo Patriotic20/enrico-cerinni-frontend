@@ -4,6 +4,7 @@ import Modal from './Modal';
 import Button from '../ui/Button';
 import { colorsAPI, sizesAPI, productVariantsAPI } from '../../api';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 export default function VariantCreationModal({
   isOpen,
@@ -202,8 +203,7 @@ export default function VariantCreationModal({
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Narx (UZS)</label>
-                <input
-                  type="number"
+                <MoneyInput
                   value={basePrice}
                   onChange={(e) => setBasePrice(e.target.value)}
                   placeholder="Narxni kiriting"

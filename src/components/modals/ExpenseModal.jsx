@@ -3,6 +3,7 @@ import { X, DollarSign, Calendar, FileText } from 'lucide-react';
 import { financeAPI } from '../../api/finance';
 import Modal from './Modal';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 const ExpenseModal = ({ isOpen, onClose, expense = null, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -191,8 +192,7 @@ const ExpenseModal = ({ isOpen, onClose, expense = null, onSuccess }) => {
               <DollarSign size={14} className="text-green-500" />
               Summa *
             </label>
-            <input
-              type="number"
+            <MoneyInput
               id="amount"
               value={formData.amount}
               onChange={(e) => handleInputChange('amount', e.target.value)}

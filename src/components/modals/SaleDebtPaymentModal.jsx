@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import Input from '../forms/Input';
 import { cn } from '../../utils/cn';
 import toast from 'react-hot-toast';
+import MoneyInput from '../ui/MoneyInput';
 
 export default function SaleDebtPaymentModal({
   sale,
@@ -111,8 +112,7 @@ export default function SaleDebtPaymentModal({
                 <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700">
                   To'lov miqdori (UZS)
                 </label>
-                <Input
-                  type="number"
+                <MoneyInput as={Input}
                   id="paymentAmount"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}

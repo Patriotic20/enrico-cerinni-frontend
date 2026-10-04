@@ -15,6 +15,7 @@ import { PeriodPicker, Kpi, PlanBar, defaultPeriod, initials } from '../componen
 import { employeesAPI, financeAPI } from '../api';
 import useSales, { ymd } from '../hooks/useSales';
 import { formatCurrency, compactAmount } from '../utils/format';
+import MoneyInput from '../components/ui/MoneyInput';
 
 const dayTick = (d) => d.slice(8, 10);
 
@@ -67,7 +68,7 @@ const PaySalaryModal = ({ isOpen, onClose, employee, kpi, period, onPaid }) => {
         </div>
         <label className="block">
           <span className="block text-xs font-medium text-gray-700 mb-1">Summa *</span>
-          <input type="number" min="0" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} className={field} />
+          <MoneyInput min="0" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)} className={field} />
         </label>
         <label className="block">
           <span className="block text-xs font-medium text-gray-700 mb-1">To'lov sanasi *</span>

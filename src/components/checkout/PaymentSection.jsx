@@ -1,6 +1,7 @@
 import { Banknote, CreditCard, ArrowLeftRight } from 'lucide-react';
 import { PAYMENT_METHODS, PAY_TYPE_LABELS } from '../../utils/constants';
 import { cn } from '../../utils/cn';
+import MoneyInput from '../ui/MoneyInput';
 
 const MODES = [
   { value: PAYMENT_METHODS.FULL, label: "To'liq" },
@@ -81,8 +82,7 @@ export default function PaymentSection({
       {paymentMethod === PAYMENT_METHODS.PARTIAL && (
         <label className="relative block">
           <span className="sr-only">Mijoz hozir to'laydi</span>
-          <input
-            type="number"
+          <MoneyInput
             inputMode="numeric"
             min="0"
             max={Number(total) || 0}

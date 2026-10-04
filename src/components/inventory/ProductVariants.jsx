@@ -65,6 +65,7 @@ export default function ProductVariants({
     setEditingVariant(variant.id);
     setEditData({
       price: variant.price,
+      cost_price: variant.cost_price ?? null,
       stock_quantity: variant.stock_quantity,
       min_stock_level: variant.min_stock_level || 0,
       is_active: variant.is_active
@@ -236,7 +237,10 @@ export default function ProductVariants({
                         : formatNumber(Math.round(price))}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-gray-500 whitespace-nowrap">
-                      {cost != null ? formatNumber(Math.round(cost)) : '—'}
+                      {editing
+                        // Empty clears the cost (null), unlike other fields which fall back to 0.
+                        ? <input type="number" min="0" value={editData.cost_price ?? ''} onChange={e => setEditData(prev => ({ ...prev, cost_price: e.target.value === '' ? null : parseFloat(e.target.value) }))} className={`${numInput} min-w-[110px]`} aria-label="Tan narx" />
+                        : cost != null ? formatNumber(Math.round(cost)) : '—'}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums text-gray-500">
                       {margin != null ? `${margin}%` : '—'}

@@ -61,7 +61,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
 function barcodeSvg(sku, t) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   try {
-    JsBarcode(svg, sku, { format: 'CODE128', width: t.bar_width, height: 100, displayValue: false, margin: 0 });
+    JsBarcode(svg, sku, { format: 'CODE128', width: t.bar_width, height: 100, displayValue: false, margin: 10 * t.bar_width });
   } catch {
     return ''; // non-ASCII SKU: label prints without bars rather than breaking the batch
   }

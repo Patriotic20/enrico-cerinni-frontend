@@ -54,7 +54,7 @@ const ProductVariantForm = ({
           product_id: product.id,
           color_id: color.id,
           size_id: size.id,
-          sku: `${product?.sku || 'PROD'}-${color.name}-${size.name}`.toUpperCase(),
+          sku: '', // backend generates a short numeric barcode
           price: parseFloat(basePrice),
           cost_price: baseCostPrice ? parseFloat(baseCostPrice) : null,
           stock_quantity: parseInt(baseStockQuantity),
@@ -298,6 +298,7 @@ const ProductVariantForm = ({
                             type="text"
                             value={variant.sku}
                             onChange={(e) => updateVariant(index, 'sku', e.target.value)}
+                            placeholder="avtomatik"
                             className="w-full px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                             disabled={loading}
                             maxLength={50}

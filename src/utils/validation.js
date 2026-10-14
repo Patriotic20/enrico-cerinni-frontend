@@ -47,9 +47,8 @@ export const validateProductVariant = (variant) => {
     errors.push('size_id must be a valid integer');
   }
   
-  if (!variant.sku || variant.sku.trim() === '') {
-    errors.push('sku is required');
-  } else if (variant.sku.length > 50) {
+  // Empty SKU is fine: the backend generates a short numeric one.
+  if (variant.sku && variant.sku.length > 50) {
     errors.push('sku must be 50 characters or less');
   }
   

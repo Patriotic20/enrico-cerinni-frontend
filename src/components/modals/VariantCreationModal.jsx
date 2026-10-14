@@ -100,8 +100,7 @@ export default function VariantCreationModal({
             color_id: color.id,
             size_id: size.id,
             price: parseFloat(basePrice),
-            stock_quantity: parseInt(baseStockQuantity),
-            sku: `${product?.sku || 'PROD'}-${color.name}-${size.name}`.toUpperCase()
+            stock_quantity: parseInt(baseStockQuantity)
           });
         });
       });
